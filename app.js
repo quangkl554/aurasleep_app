@@ -1340,6 +1340,43 @@ async function buildLocalSleepAnalysisMessage() {
   ].join('\n');
 }
 
+function buildClientChatFallback(messageText) {
+  const normalized = String(messageText || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  if (normalized.includes('goi y am thanh') || normalized.includes('am thanh') || normalized.includes('nhac')) {
+    return [
+      'AuraBot đang dùng chế độ dự phòng vì AI cloud chưa phản hồi ổn định.',
+      '',
+      'Gợi ý âm thanh cho tối nay:',
+      '- Mưa rào: che tiếng ồn tốt, dễ thư giãn.',
+      '- Sóng biển: nhịp đều, phù hợp trước khi ngủ.',
+      '- Brown Noise hoặc Pink Noise: âm nền ổn định.',
+      '- Thiền sâu hoặc Piano: phù hợp khi muốn thả lỏng nhẹ nhàng.'
+    ].join('\n');
+  }
+
+  if (normalized.includes('kho ngu') || normalized.includes('mat ngu')) {
+    return [
+      'AuraBot đang dùng chế độ dự phòng vì AI cloud chưa phản hồi ổn định.',
+      '',
+      'Bạn có thể thử routine 20-30 phút:',
+      '- Giảm ánh sáng mạnh và tắt bớt thông báo.',
+      '- Chọn âm thanh nhẹ như Mưa rào hoặc Thiền sâu.',
+      '- Hít vào 4 giây, giữ 2 giây, thở ra 6 giây.',
+      '- Nếu vẫn tỉnh sau 20 phút, rời giường một lúc rồi quay lại khi buồn ngủ.'
+    ].join('\n');
+  }
+
+  return [
+    'AuraBot đang dùng chế độ dự phòng vì AI cloud chưa phản hồi ổn định.',
+    '',
+    'Bạn vẫn có thể dùng các tính năng chính: ghi nhận giấc ngủ, xem dashboard, chọn âm thanh và bật routine thư giãn. Mình sẽ tiếp tục hỗ trợ bằng các gợi ý cơ bản trong lúc AI cloud được khôi phục.'
+  ].join('\n');
+}
+
 async function sendChatMessage() {
   const inputField = document.getElementById('chat-input-field');
   const messageText = inputField.value.trim();
@@ -1404,19 +1441,22 @@ async function sendChatMessage() {
       appendMultilineText(botMsg, data.reply);
       chatMessages.appendChild(botMsg);
     } else {
-      const errData = await res.json();
+      const errData = await res.json().catch(() => ({}));
       const botMsg = document.createElement('div');
       botMsg.className = 'message bot';
-      botMsg.textContent = errData.message?.includes('Groq')
-        ? 'AuraBot AI chưa được cấu hình Groq trên server. Riêng phần phân tích giấc ngủ vẫn có thể dùng dữ liệu thật của bạn.'
-        : 'Lỗi từ Server: ' + (errData.message || 'Hệ thống đang bận');
+      const serverMessage = errData.message || '';
+      if (serverMessage.toLowerCase().includes('ai') || res.status >= 500) {
+        appendMultilineText(botMsg, buildClientChatFallback(messageText));
+      } else {
+        botMsg.textContent = 'Lỗi từ Server: ' + (serverMessage || 'Hệ thống đang bận');
+      }
       chatMessages.appendChild(botMsg);
     }
   } catch (err) {
     removeTypingIndicator();
     const botMsg = document.createElement('div');
     botMsg.className = 'message bot';
-    botMsg.textContent = 'Mất kết nối tới server AI.';
+    appendMultilineText(botMsg, buildClientChatFallback(messageText));
     chatMessages.appendChild(botMsg);
   }
 
