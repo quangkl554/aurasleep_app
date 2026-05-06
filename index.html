@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AuraSleep</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+<div id="app-container">
+
+  <!-- ===============================
+       SPLASH SCREEN
+       =============================== -->
+  <div id="splash-screen" style="position: absolute; top:0; left:0; width:100%; height:100%; background: var(--bg-primary); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s;">
+    <i class="fa-solid fa-moon" style="font-size: 64px; color: var(--accent-primary); animation: float 3s ease-in-out infinite;"></i>
+    <h1 style="margin-top: 20px; font-size: 28px; background: linear-gradient(to right, var(--text-primary), var(--accent-primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">AuraSleep</h1>
+    <div style="margin-top: 30px; width: 40px; height: 4px; background: var(--border); border-radius: 4px; overflow: hidden;">
+      <div style="width: 50%; height: 100%; background: var(--accent-primary); animation: loading 1.5s infinite;"></div>
+    </div>
+  </div>
+
+  <!-- ===============================
+       SCREEN 1: LOGIN / ONBOARDING
+       =============================== -->
+  <section id="login-screen" class="screen active" style="z-index: 50;">
+    <div class="auth-container">
+      <div class="auth-logo">
+        <i class="fa-solid fa-moon"></i>
+        <h1>AuraSleep</h1>
+        <p>Sleep Better - Live Better</p>
+      </div>
+      
+      <div class="glass-panel" style="padding: 24px;">
+        <div class="auth-tabs">
+          <div class="auth-tab active">Đăng nhập</div>
+          <div class="auth-tab">Đăng ký</div>
+        </div>
+        
+        <form id="login-form">
+          <div class="form-group">
+            <input type="email" class="form-input" placeholder="Email hoặc Số điện thoại">
+          </div>
+          <div class="form-group">
+            <input type="password" class="form-input" placeholder="Mật khẩu">
+          </div>
+          <div style="text-align: right; margin-bottom: 20px;">
+            <a href="#" style="color: var(--accent-secondary); font-size: 13px; text-decoration: none;">Quên mật khẩu?</a>
+          </div>
+          <button type="button" class="btn btn-primary w-100" onclick="handleLoginFromForm(this)">Đăng nhập ngay</button>
+        </form>
+        
+        <div class="social-login">
+          <p>Hoặc đăng nhập với</p>
+          <div class="social-icons">
+            <div class="social-icon" onclick="alert('Đăng nhập Google sẽ được bật ở bản beta.')"><i class="fa-brands fa-google"></i></div>
+            <div class="social-icon" onclick="alert('Đăng nhập Facebook sẽ được bật ở bản beta.')"><i class="fa-brands fa-facebook-f"></i></div>
+            <div class="social-icon" onclick="alert('Đăng nhập Apple sẽ được bật ở bản beta.')"><i class="fa-brands fa-apple"></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===============================
+       SCREEN 2: DASHBOARD
+       =============================== -->
+  <section id="dashboard-screen" class="screen">
+    <div class="top-header">
+      <div class="header-user">
+        <div class="avatar">AS</div>
+        <div class="header-greeting">
+          <span id="greeting-text">Chào buổi tối,</span>
+          <h2>AURASLEEP</h2>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="icon-btn" onclick="toggleTheme()"><i class="fa-solid fa-circle-half-stroke"></i></div>
+        <div class="icon-btn" onclick="alert('Bạn chưa có thông báo mới!')"><i class="fa-regular fa-bell"></i></div>
+      </div>
+    </div>
+
+    <div class="content-padding">
+      <div class="sleep-score-container">
+        <div class="score-circle">
+          <div class="score-content">
+            <div class="score-value">85</div>
+            <div class="score-label">Điểm giấc ngủ</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="glass-panel stat-item">
+          <i class="fa-regular fa-clock"></i>
+          <span class="stat-val">7h 23m</span>
+          <span class="stat-title">Thời gian ngủ</span>
+        </div>
+        <div class="glass-panel stat-item">
+          <i class="fa-solid fa-bolt"></i>
+          <span class="stat-val">92%</span>
+          <span class="stat-title">Hiệu suất</span>
+        </div>
+        <div class="glass-panel stat-item">
+          <i class="fa-solid fa-heart-pulse"></i>
+          <span class="stat-val">Ổn định</span>
+          <span class="stat-title">Nhịp sinh học</span>
+        </div>
+      </div>
+
+      <div class="quick-actions">
+        <div class="action-btn" onclick="navigateTo('routine')">
+          <div class="action-icon"><i class="fa-solid fa-moon"></i></div>
+          <span>Ngủ ngay</span>
+        </div>
+        <div class="action-btn" onclick="navigateTo('device')">
+          <div class="action-icon"><i class="fa-solid fa-lightbulb"></i></div>
+          <span>Ánh sáng</span>
+        </div>
+        <div class="action-btn" onclick="navigateTo('chat')">
+          <div class="action-icon" style="color: var(--accent-primary)"><i class="fa-solid fa-robot"></i></div>
+          <span>AI Chat</span>
+        </div>
+        <div class="action-btn" onclick="navigateTo('blog')">
+          <div class="action-icon"><i class="fa-solid fa-book-open"></i></div>
+          <span>Kiến thức</span>
+        </div>
+      </div>
+
+      <div class="glass-panel ai-card">
+        <div class="ai-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+        <div class="ai-text">
+          <h4>Gợi ý từ AuraBot</h4>
+          <p>Dựa trên nhịp sinh học của bạn, hãy thử đi ngủ sớm hơn 30 phút tối nay để đạt REM sâu hơn nhé.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===============================
+       SCREEN 3: DEVICE CONTROL
+       =============================== -->
+  <section id="device-screen" class="screen">
+    <div class="top-header">
+      <h2>Thiết bị AuraSleep</h2>
+    </div>
+
+    <div class="content-padding">
+      <div class="device-status">
+        <span class="status-dot"></span>
+        <span style="font-size: 14px; font-weight: 500;">AuraSleep Pro — Đã kết nối</span>
+      </div>
+
+      <div class="light-controller">
+        <div class="light-circle" id="light-display">
+          <i class="fa-solid fa-lightbulb light-bulb" id="light-icon"></i>
+        </div>
+      </div>
+
+      <div class="slider-container">
+        <div class="slider-header">
+          <span>Cường độ ánh sáng</span>
+          <span id="light-val">60%</span>
+        </div>
+        <input type="range" min="0" max="100" value="60" id="intensity-slider">
+      </div>
+
+      <div class="slider-container mb-8">
+        <div class="slider-header">
+          <span>Nhiệt độ màu</span>
+          <span>Ấm áp</span>
+        </div>
+        <input type="range" min="2700" max="6500" value="3200" id="temp-slider" style="background: linear-gradient(to right, #ff8c00, #fefcf3, #e0f2fe);">
+      </div>
+
+      <div class="section-title">
+        <h3>Âm thanh & Tần số</h3>
+        <a href="#" onclick="alert('Tính năng mở rộng kho âm thanh đang phát triển!')">Xem tất cả</a>
+      </div>
+
+      <!-- Frequency Visualizer -->
+      <div id="audio-visualizer" class="glass-panel" style="padding: 16px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span id="playing-sound-name" style="font-weight: 600; font-size: 14px; color: var(--accent-primary);">White Noise</span>
+          <span id="playing-sound-freq" style="font-size: 11px; background: rgba(244,162,97,0.2); color: var(--accent-primary); padding: 2px 8px; border-radius: 100px;">Băng thông rộng (20Hz - 20kHz)</span>
+        </div>
+        <div class="equalizer">
+          <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+          <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+          <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+          <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+        </div>
+      </div>
+
+      <div class="sound-grid">
+        <div class="sound-item" data-sound="rain" data-freq="Tần số ngẫu nhiên">
+          <div class="sound-icon"><i class="fa-solid fa-cloud-rain"></i></div>
+          <span>Mưa rào</span>
+        </div>
+        <div class="sound-item" data-sound="ocean" data-freq="Tần số thấp <500Hz">
+          <div class="sound-icon"><i class="fa-solid fa-water"></i></div>
+          <span>Sóng biển</span>
+        </div>
+        <div class="sound-item" data-sound="brown" data-freq="1/f² (Mật độ giảm dần)">
+          <div class="sound-icon" style="color: #8B4513;"><i class="fa-solid fa-wave-square"></i></div>
+          <span>Brown Noise</span>
+        </div>
+        <div class="sound-item" data-sound="fire" data-freq="Âm thanh nổ lách tách">
+          <div class="sound-icon"><i class="fa-solid fa-fire"></i></div>
+          <span>Lửa trại</span>
+        </div>
+        <div class="sound-item" data-sound="pink" data-freq="1/f (Công suất đều)">
+          <div class="sound-icon" style="color: #FFC0CB;"><i class="fa-solid fa-wave-square"></i></div>
+          <span>Pink Noise</span>
+        </div>
+        <div class="sound-item" data-sound="piano" data-freq="432Hz (Tần số chữa lành)">
+          <div class="sound-icon"><i class="fa-solid fa-music"></i></div>
+          <span>Piano</span>
+        </div>
+        <div class="sound-item" data-sound="stream" data-freq="Tần số trung bình">
+          <div class="sound-icon"><i class="fa-solid fa-droplet"></i></div>
+          <span>Suối chảy</span>
+        </div>
+        <div class="sound-item active" data-sound="white" data-freq="Băng thông rộng (20Hz-20kHz)">
+          <div class="sound-icon"><i class="fa-solid fa-wave-square"></i></div>
+          <span>White Noise</span>
+        </div>
+        
+        <!-- NEW SOUNDS -->
+        <div class="sound-item" data-sound="birds" data-freq="2kHz - 5kHz (Tự nhiên)">
+          <div class="sound-icon" style="color: #4ade80;"><i class="fa-solid fa-dove"></i></div>
+          <span>Chim hót</span>
+        </div>
+        <div class="sound-item" data-sound="leaves" data-freq="Tiếng xào xạc tần số cao">
+          <div class="sound-icon" style="color: #a3e635;"><i class="fa-brands fa-envira"></i></div>
+          <span>Lá rơi</span>
+        </div>
+        <div class="sound-item" data-sound="meditation" data-freq="528Hz (Sóng Alpha/Theta)">
+          <div class="sound-icon" style="color: #c084fc;"><i class="fa-solid fa-om"></i></div>
+          <span>Nhạc thiền</span>
+        </div>
+        <div class="sound-item" data-sound="alpha" data-freq="Sóng não Alpha (8-12Hz)">
+          <div class="sound-icon" style="color: #60a5fa;"><i class="fa-solid fa-brain"></i></div>
+          <span>Sóng Alpha</span>
+        </div>
+      </div>
+
+      <button class="btn btn-primary w-100 mt-4" onclick="toggleSleepMode(this)">
+        <i class="fa-solid fa-power-off" style="margin-right: 8px;"></i> Kích hoạt chế độ ngủ
+      </button>
+    </div>
+  </section>
+
+  <!-- ===============================
+       SCREEN 4: SLEEP ANALYTICS
+       =============================== -->
+  <section id="analytics-screen" class="screen">
+    <div class="top-header">
+      <h2>Phân tích giấc ngủ</h2>
+    </div>
+
+    <div class="content-padding">
+      <div class="auth-tabs mb-4" id="analytics-tabs">
+        <div class="auth-tab" data-tab="today">Hôm nay</div>
+        <div class="auth-tab active" data-tab="week">Tuần</div>
+        <div class="auth-tab" data-tab="month">Tháng</div>
+      </div>
+
+      <div class="glass-panel mb-4" style="padding: 20px 20px 10px; height: 240px; display: flex; flex-direction: column; justify-content: flex-end;" id="mock-chart">
+        <div style="display: flex; align-items:flex-end; justify-content:space-between; gap: 8px; height: 180px; position: relative;">
+          <!-- Grid Lines -->
+          <div style="position: absolute; width: 100%; height: 1px; background: var(--border); bottom: 50%; z-index: 0;"></div>
+          <div style="position: absolute; width: 100%; height: 1px; background: var(--border); bottom: 100%; z-index: 0;"></div>
+          
+          <div class="chart-bar-container" style="width: 12%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; z-index: 1;" onclick="selectBar(this)">
+            <span class="chart-value" style="font-size: 10px; margin-bottom: 4px; font-weight: 600;">6.5h</span>
+            <div class="chart-bar" style="width: 100%; height: 60%; background: var(--border); border-radius: 4px; transition: all 0.5s;"></div>
+            <span style="font-size: 10px; margin-top: 8px; color: var(--text-secondary);">T2</span>
+          </div>
+          <div class="chart-bar-container" style="width: 12%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; z-index: 1;" onclick="selectBar(this)">
+            <span class="chart-value" style="font-size: 10px; margin-bottom: 4px; font-weight: 600;">7.2h</span>
+            <div class="chart-bar" style="width: 100%; height: 80%; background: var(--border); border-radius: 4px; transition: all 0.5s;"></div>
+            <span style="font-size: 10px; margin-top: 8px; color: var(--text-secondary);">T3</span>
+          </div>
+          <div class="chart-bar-container active" style="width: 12%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; z-index: 1;" onclick="selectBar(this)">
+            <span class="chart-value active-val" style="font-size: 10px; margin-bottom: 4px; font-weight: 800; color: var(--accent-primary);">6.8h</span>
+            <div class="chart-bar active" style="width: 100%; height: 100%; background: var(--accent-primary); border-radius: 4px; box-shadow: 0 0 10px rgba(244,162,97,0.5); transition: all 0.5s;"></div>
+            <span style="font-size: 10px; margin-top: 8px; color: var(--text-primary); font-weight: 700;">T4</span>
+          </div>
+          <div class="chart-bar-container" style="width: 12%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; z-index: 1;" onclick="selectBar(this)">
+            <span class="chart-value" style="font-size: 10px; margin-bottom: 4px; font-weight: 600;">8.0h</span>
+            <div class="chart-bar" style="width: 100%; height: 90%; background: var(--border); border-radius: 4px; transition: all 0.5s;"></div>
+            <span style="font-size: 10px; margin-top: 8px; color: var(--text-secondary);">T5</span>
+          </div>
+          <div class="chart-bar-container" style="width: 12%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; z-index: 1;" onclick="selectBar(this)">
+            <span class="chart-value" style="font-size: 10px; margin-bottom: 4px; font-weight: 600;">6.8h</span>
+            <div class="chart-bar" style="width: 100%; height: 75%; background: var(--border); border-radius: 4px; transition: all 0.5s;"></div>
+            <span style="font-size: 10px; margin-top: 8px; color: var(--text-secondary);">T6</span>
+          </div>
+          <div class="chart-bar-container" style="width: 12%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; z-index: 1;" onclick="selectBar(this)">
+            <span class="chart-value" style="font-size: 10px; margin-bottom: 4px; font-weight: 600;">8.5h</span>
+            <div class="chart-bar" style="width: 100%; height: 100%; background: var(--border); border-radius: 4px; transition: all 0.5s;"></div>
+            <span style="font-size: 10px; margin-top: 8px; color: var(--text-secondary);">T7</span>
+          </div>
+          <div class="chart-bar-container" style="width: 12%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; z-index: 1;" onclick="selectBar(this)">
+            <span class="chart-value" style="font-size: 10px; margin-bottom: 4px; font-weight: 600;">7.5h</span>
+            <div class="chart-bar" style="width: 100%; height: 85%; background: var(--border); border-radius: 4px; transition: all 0.5s;"></div>
+            <span style="font-size: 10px; margin-top: 8px; color: var(--text-secondary);">CN</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-grid" style="grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="glass-panel stat-item" style="align-items: flex-start; text-align: left; padding: 12px;">
+          <span class="stat-title">Trung bình</span>
+          <span class="stat-val" style="font-size: 20px; color: var(--accent-primary);">7h 15m</span>
+        </div>
+        <div class="glass-panel stat-item" style="align-items: flex-start; text-align: left; padding: 12px;">
+          <span class="stat-title">Thay đổi</span>
+          <span class="stat-val" style="font-size: 20px; color: #10b981;">+12%</span>
+        </div>
+        <div class="glass-panel stat-item" style="align-items: flex-start; text-align: left; padding: 12px;">
+          <span class="stat-title">Chìm giấc</span>
+          <span class="stat-val" style="font-size: 20px;">12 phút</span>
+        </div>
+        <div class="glass-panel stat-item" style="align-items: flex-start; text-align: left; padding: 12px;">
+          <span class="stat-title">Chất lượng</span>
+          <span class="stat-val" style="font-size: 20px;">94/100</span>
+        </div>
+      </div>
+
+      <div class="glass-panel ai-card mt-4">
+        <div class="ai-icon" style="background: #10b981;"><i class="fa-solid fa-arrow-trend-up"></i></div>
+        <div class="ai-text">
+          <h4>Xu hướng tuyệt vời!</h4>
+          <p>Giấc ngủ sâu của bạn đã tăng 15% so với tuần trước nhờ duy trì thói quen nghe white noise.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===============================
+       SCREEN 5: STORE / PRICING
+       =============================== -->
+  <section id="store-screen" class="screen">
+    <div class="top-header">
+      <h2>Cửa hàng & Dịch vụ</h2>
+    </div>
+
+    <div class="content-padding">
+      <div class="glass-panel product-hero">
+        <div class="product-img-container">
+          <img src="assets/product.png" alt="AuraSleep Device" onerror="this.src='https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'">
+        </div>
+        <div class="product-info">
+          <h3 style="font-size: 20px; margin-bottom: 4px;">Thiết bị AuraSleep Pro</h3>
+          <p style="margin-bottom: 16px;">Phần cứng cao cấp mô phỏng bình minh tự nhiên.</p>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 24px; font-weight: 800; color: var(--text-primary);">1.490.000₫</div>
+            <button class="btn btn-primary" style="padding: 10px 20px;" onclick="alert('Đã thêm Thiết bị AuraSleep vào giỏ hàng!')">
+              <i class="fa-solid fa-cart-plus" style="margin-right: 6px;"></i> Mua ngay
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="mb-4">Nâng cấp trải nghiệm</h3>
+      
+      <div class="pricing-cards">
+        <!-- Premium Plan -->
+        <div class="glass-panel price-card featured">
+          <div class="badge">Khuyến nghị</div>
+          <div class="price-header">
+            <h3 class="price-title">Sleep Routine Premium</h3>
+            <div class="price-amount" id="premium-price">99.000₫ <span>/tháng</span></div>
+          </div>
+          
+          <div style="display: flex; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 4px; margin-bottom: 20px;">
+            <div class="sub-toggle active" onclick="switchBilling(this, 'month')" style="flex: 1; text-align: center; padding: 8px; font-size: 12px; cursor: pointer; border-radius: 6px; background: var(--card-bg); font-weight: 600;">1 Tháng</div>
+            <div class="sub-toggle" onclick="switchBilling(this, 'year')" style="flex: 1; text-align: center; padding: 8px; font-size: 12px; cursor: pointer; border-radius: 6px; color: var(--text-secondary);">1 Năm (-33%)</div>
+          </div>
+          <ul class="feature-list">
+            <li><i class="fa-solid fa-check"></i> <span>Tất cả tính năng gói cơ bản</span></li>
+            <li><i class="fa-solid fa-check"></i> <span>AI Sleep Routine cá nhân hóa theo hành vi</span></li>
+            <li><i class="fa-solid fa-check"></i> <span>Tự động điều chỉnh nhịp sinh học</span></li>
+            <li><i class="fa-solid fa-check"></i> <span>Báo cáo giấc ngủ chuyên sâu</span></li>
+            <li><i class="fa-solid fa-check"></i> <span>Nội dung âm thanh độc quyền (50+)</span></li>
+          </ul>
+          <button class="btn btn-primary w-100" onclick="upgradePremium()">
+            <i class="fa-solid fa-crown" style="margin-right: 8px;"></i> Đăng ký Premium
+          </button>
+        </div>
+
+        <!-- Free Plan -->
+        <div class="glass-panel price-card">
+          <div class="price-header">
+            <h3 class="price-title">Gói Miễn phí</h3>
+            <div class="price-amount">0₫ <span>/mãi mãi</span></div>
+          </div>
+          <ul class="feature-list">
+            <li><i class="fa-solid fa-check"></i> <span>Âm thanh white noise cơ bản</span></li>
+            <li><i class="fa-solid fa-check"></i> <span>Ánh sáng dịu nhẹ cố định</span></li>
+            <li><i class="fa-solid fa-check"></i> <span>Hẹn giờ tắt đơn giản</span></li>
+            <li class="disabled"><i class="fa-solid fa-xmark"></i> <span>AI cá nhân hóa Routine</span></li>
+            <li class="disabled"><i class="fa-solid fa-xmark"></i> <span>Fade-in/Fade-out thông minh</span></li>
+          </ul>
+          <button class="btn btn-outline w-100" disabled>
+            <i class="fa-solid fa-check" style="margin-right: 8px;"></i> Đang sử dụng
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===============================
+       SCREEN 6: PROFILE
+       =============================== -->
+  <section id="profile-screen" class="screen">
+    <div class="top-header" style="background: transparent;">
+      <h2>Hồ sơ</h2>
+    </div>
+
+    <div class="content-padding">
+      <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 30px;">
+        <div class="avatar" style="width: 80px; height: 80px; font-size: 32px; margin-bottom: 16px;">AS</div>
+        <h2>AURASLEEP</h2>
+        <div style="background: rgba(244,162,97,0.2); color: var(--accent-primary); padding: 4px 12px; border-radius: 100px; font-size: 12px; font-weight: 600;">Premium Member</div>
+      </div>
+
+      <div class="glass-panel" style="overflow: hidden; margin-bottom: 24px;">
+        <div class="menu-item" style="border-bottom: 1px solid var(--border);">
+          <div class="menu-icon"><i class="fa-solid fa-moon"></i></div>
+          <div class="menu-text">Giao diện (Tối / Sáng)</div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="theme-toggle-btn" onchange="toggleTheme()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <a href="#" class="menu-item" style="border-bottom: 1px solid var(--border);" onclick="alert('Chưa có thông báo mới.')">
+          <div class="menu-icon"><i class="fa-regular fa-bell"></i></div>
+          <div class="menu-text">Thông báo & Nhắc nhở</div>
+          <i class="fa-solid fa-chevron-right menu-arrow"></i>
+        </a>
+        <a href="#" class="menu-item" onclick="navigateTo('device')">
+          <div class="menu-icon"><i class="fa-brands fa-bluetooth-b"></i></div>
+          <div class="menu-text">Thiết bị đã kết nối</div>
+          <span style="font-size: 12px; color: #10b981; margin-right: 8px;">Aura Pro</span>
+          <i class="fa-solid fa-chevron-right menu-arrow"></i>
+        </a>
+      </div>
+
+      <div class="glass-panel" style="overflow: hidden; margin-bottom: 24px;">
+        <a href="#" class="menu-item" style="border-bottom: 1px solid var(--border);" onclick="alert('Đang mở cài đặt Bảo mật...')">
+          <div class="menu-icon"><i class="fa-solid fa-shield-halved"></i></div>
+          <div class="menu-text">Bảo mật & Quyền riêng tư</div>
+          <i class="fa-solid fa-chevron-right menu-arrow"></i>
+        </a>
+        <a href="#" class="menu-item" style="border-bottom: 1px solid var(--border);" onclick="alert('Kết nối CSKH 24/7...')">
+          <div class="menu-icon"><i class="fa-regular fa-circle-question"></i></div>
+          <div class="menu-text">Trung tâm hỗ trợ</div>
+          <i class="fa-solid fa-chevron-right menu-arrow"></i>
+        </a>
+        <a href="#" class="menu-item" onclick="alert('Mở Điều khoản sử dụng...')">
+          <div class="menu-icon"><i class="fa-solid fa-file-contract"></i></div>
+          <div class="menu-text">Điều khoản sử dụng</div>
+          <i class="fa-solid fa-chevron-right menu-arrow"></i>
+        </a>
+      </div>
+
+      <button class="btn btn-outline w-100" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3);" onclick="confirmLogout()">
+        <i class="fa-solid fa-arrow-right-from-bracket" style="margin-right: 8px;"></i> Đăng xuất
+      </button>
+      <div style="text-align: center; margin-top: 20px; font-size: 12px; color: var(--text-secondary);">
+        AuraSleep v1.0.0
+      </div>
+    </div>
+  </section>
+
+  <!-- ===============================
+       SCREEN 7: CHATBOT AI
+       =============================== -->
+  <section id="chat-screen" class="screen">
+    <div class="top-header" style="border-bottom: 1px solid var(--border);">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div class="icon-btn" onclick="navigateTo('dashboard')"><i class="fa-solid fa-arrow-left"></i></div>
+        <div>
+          <h2 style="margin: 0; font-size: 18px;">AuraBot</h2>
+          <span style="font-size: 12px; color: #10b981;">● Đang hoạt động</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-container">
+      <div class="chat-messages" id="chat-messages">
+        <div class="message bot">
+          Xin chào AURASLEEP! 👋 Tôi là AuraBot, trợ lý giấc ngủ cá nhân của bạn. Bạn muốn nghe phân tích giấc ngủ hôm nay hay cần gợi ý thư giãn?
+        </div>
+        <div class="chat-suggestions" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;">
+          <div onclick="document.getElementById('chat-input-field').value='Tôi đang khó ngủ'; sendChatMessage();" style="padding: 8px 12px; border-radius: 100px; border: 1px solid var(--accent-primary); font-size: 12px; color: var(--accent-primary); cursor: pointer; background: rgba(244,162,97,0.1);">Tôi đang khó ngủ</div>
+          <div onclick="document.getElementById('chat-input-field').value='Gợi ý âm thanh'; sendChatMessage();" style="padding: 8px 12px; border-radius: 100px; border: 1px solid var(--accent-primary); font-size: 12px; color: var(--accent-primary); cursor: pointer; background: rgba(244,162,97,0.1);">Gợi ý âm thanh</div>
+          <div onclick="document.getElementById('chat-input-field').value='Phân tích giấc ngủ'; sendChatMessage();" style="padding: 8px 12px; border-radius: 100px; border: 1px solid var(--accent-primary); font-size: 12px; color: var(--accent-primary); cursor: pointer; background: rgba(244,162,97,0.1);">Phân tích giấc ngủ</div>
+        </div>
+      </div>
+      
+      <div class="chat-input-area">
+        <input type="text" class="chat-input" placeholder="Nhập tin nhắn..." id="chat-input-field" onkeypress="handleChatEnter(event)">
+        <button class="chat-send" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===============================
+       SCREEN 8: BLOG
+       =============================== -->
+  <section id="blog-screen" class="screen">
+    <div class="top-header">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div class="icon-btn" onclick="navigateTo('dashboard')"><i class="fa-solid fa-arrow-left"></i></div>
+        <h2 style="margin: 0;">Kiến thức Giấc ngủ</h2>
+      </div>
+      <div class="icon-btn"><i class="fa-solid fa-magnifying-glass"></i></div>
+    </div>
+
+    <div class="content-padding">
+      <!-- Categories (Scrollable horizontally) -->
+      <div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 16px; margin-bottom: 8px; scrollbar-width: none;">
+        <div style="padding: 8px 16px; background: var(--accent-primary); color: white; border-radius: 100px; font-size: 14px; white-space: nowrap;">Tất cả</div>
+        <div style="padding: 8px 16px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 100px; font-size: 14px; white-space: nowrap;">Sleep Hygiene</div>
+        <div style="padding: 8px 16px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 100px; font-size: 14px; white-space: nowrap;">Tinh thần</div>
+        <div style="padding: 8px 16px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 100px; font-size: 14px; white-space: nowrap;">Mẹo hay</div>
+      </div>
+
+      <!-- Hero Article -->
+      <div class="glass-panel" style="overflow: hidden; margin-bottom: 24px;">
+        <div style="height: 180px; background: url('https://images.unsplash.com/photo-1505330622279-bf7d7fc918f4?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80') center/cover;"></div>
+        <div style="padding: 16px;">
+          <div style="color: var(--accent-primary); font-size: 12px; font-weight: 700; margin-bottom: 8px;">MỚI NHẤT</div>
+          <h3 style="margin-bottom: 8px; font-size: 18px;">Ánh sáng xanh ảnh hưởng đến nhịp sinh học của bạn như thế nào?</h3>
+          <p style="font-size: 13px; margin-bottom: 16px;">Khám phá cách màn hình điện thoại ức chế melatonin và giải pháp từ AuraSleep.</p>
+          <div style="display: flex; align-items: center; color: var(--text-secondary); font-size: 12px;">
+            <i class="fa-regular fa-clock" style="margin-right: 6px;"></i> 5 phút đọc
+          </div>
+        </div>
+      </div>
+
+      <!-- List Articles -->
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="glass-panel" style="display: flex; padding: 12px; gap: 12px; align-items: center;">
+          <div style="width: 80px; height: 80px; border-radius: 12px; background: url('https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80') center/cover;"></div>
+          <div style="flex: 1;">
+            <h4 style="font-size: 14px; margin-bottom: 8px; line-height: 1.4;">5 thói quen buổi tối giúp sinh viên y khoa ngủ ngon hơn</h4>
+            <div style="font-size: 11px; color: var(--text-secondary);">4 phút đọc</div>
+          </div>
+        </div>
+
+        <div class="glass-panel" style="display: flex; padding: 12px; gap: 12px; align-items: center;">
+          <div style="width: 80px; height: 80px; border-radius: 12px; background: url('https://images.unsplash.com/photo-1499209974431-9dddcece7f88?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80') center/cover;"></div>
+          <div style="flex: 1;">
+            <h4 style="font-size: 14px; margin-bottom: 8px; line-height: 1.4;">Thiền chánh niệm trước khi ngủ: Hướng dẫn cho người mới</h4>
+            <div style="font-size: 11px; color: var(--text-secondary);">6 phút đọc</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===============================
+       SCREEN 9: SLEEP ROUTINE
+       =============================== -->
+  <section id="routine-screen" class="screen">
+    <div class="top-header">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div class="icon-btn" onclick="navigateTo('dashboard')"><i class="fa-solid fa-arrow-left"></i></div>
+        <h2 style="margin: 0;">Routine Của Bạn</h2>
+      </div>
+    </div>
+
+    <div class="content-padding">
+      <p style="margin-bottom: 20px;">Thiết lập chu kỳ thư giãn và thức dậy tự nhiên để tối ưu hóa năng lượng.</p>
+
+      <!-- Timeline -->
+      <div class="glass-panel" style="padding: 24px; position: relative; margin-bottom: 30px;">
+        <!-- Vertical Line -->
+        <div style="position: absolute; left: 36px; top: 30px; bottom: 30px; width: 2px; background: var(--border);"></div>
+
+        <!-- Step 1 -->
+        <div style="display: flex; gap: 16px; margin-bottom: 30px; position: relative; z-index: 2;">
+          <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--accent-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 0 10px rgba(244,162,97,0.5);"></div>
+          <div style="flex: 1;">
+            <div style="font-size: 18px; font-weight: 700; margin-bottom: 4px;" class="routine-time">22:00</div>
+            <div style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">Bắt đầu thư giãn</div>
+            <p style="font-size: 12px;">Ánh sáng ấm 30%. Âm thanh: Mưa rơi nhỏ.</p>
+          </div>
+          <div onclick="editTime(this)" style="width: 32px; height: 32px; border-radius: 50%; background: var(--card-bg); display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid var(--border);">
+            <i class="fa-solid fa-pen" style="color: var(--text-secondary); font-size: 12px;"></i>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div style="display: flex; gap: 16px; margin-bottom: 30px; position: relative; z-index: 2;">
+          <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--card-bg); border: 2px solid var(--border); flex-shrink: 0;"></div>
+          <div style="flex: 1;">
+            <div style="font-size: 18px; font-weight: 700; margin-bottom: 4px;" class="routine-time">22:30</div>
+            <div style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">Đi vào giấc ngủ</div>
+            <p style="font-size: 12px;">Tắt đèn (Fade-out). Âm thanh nhỏ dần sau 15p.</p>
+          </div>
+          <div onclick="editTime(this)" style="width: 32px; height: 32px; border-radius: 50%; background: var(--card-bg); display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid var(--border);">
+            <i class="fa-solid fa-pen" style="color: var(--text-secondary); font-size: 12px;"></i>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div style="display: flex; gap: 16px; position: relative; z-index: 2;">
+          <div style="width: 24px; height: 24px; border-radius: 50%; background: #10b981; flex-shrink: 0; box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);"></div>
+          <div style="flex: 1;">
+            <div style="font-size: 18px; font-weight: 700; margin-bottom: 4px;" class="routine-time">06:30</div>
+            <div style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">Báo thức bình minh</div>
+            <p style="font-size: 12px;">Ánh sáng sáng dần trong 20p. Tiếng chim hót.</p>
+          </div>
+          <div onclick="editTime(this)" style="width: 32px; height: 32px; border-radius: 50%; background: var(--card-bg); display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid var(--border);">
+            <i class="fa-solid fa-pen" style="color: var(--text-secondary); font-size: 12px;"></i>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary w-100" onclick="activateRoutine(this)">
+        <i class="fa-solid fa-play" style="margin-right: 8px;"></i> Kích hoạt Routine Này
+      </button>
+    </div>
+  </section>
+
+  <!-- ===============================
+       BOTTOM NAVIGATION BAR
+       =============================== -->
+  <nav id="bottom-nav">
+    <div class="nav-item active" onclick="navigateTo('dashboard', this)">
+      <i class="fa-solid fa-house"></i>
+      <span>Trang chủ</span>
+    </div>
+    <div class="nav-item" onclick="navigateTo('device', this)">
+      <i class="fa-solid fa-lightbulb"></i>
+      <span>Thiết bị</span>
+    </div>
+    <div class="nav-item" onclick="navigateTo('analytics', this)">
+      <i class="fa-solid fa-chart-simple"></i>
+      <span>Phân tích</span>
+    </div>
+    <div class="nav-item" onclick="navigateTo('store', this)">
+      <i class="fa-solid fa-cart-shopping"></i>
+      <span>Cửa hàng</span>
+    </div>
+    <div class="nav-item" onclick="navigateTo('profile', this)">
+      <i class="fa-solid fa-user"></i>
+      <span>Hồ sơ</span>
+    </div>
+  </nav>
+
+</div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

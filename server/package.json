@@ -1,0 +1,25 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "AuraSleep MVP API",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "db:sync": "node sync_db.js",
+    "check": "node --check server.js && node --check routes/auth.js && node --check routes/chat.js && node --check routes/device.js && node --check routes/payment.js && node --check routes/routine.js && node --check routes/sleep.js",
+    "test": "npm run check"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mysql2": "^3.22.3",
+    "sequelize": "^6.37.8"
+  }
+}
