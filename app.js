@@ -1,11 +1,28 @@
 const API_BASE_URL = (window.AURASLEEP_CONFIG?.API_BASE_URL || 'http://localhost:5000').replace(/\/$/, '');
 const TOKEN_KEY = 'aurasleep_token';
 const SOUND_EXTENSIONS = ['mp3', 'mp4', 'm4a', 'wav', 'ogg'];
+const SOUND_FILE_MAP = {
+  rain: 'rain.mp3',
+  ocean: 'ocean wave.mp3',
+  brown: 'brown noise.mp3',
+  fire: 'fire.mp3',
+  pink: 'pink noise.mp3',
+  piano: 'piano.mp3',
+  stream: 'water stream.mp3',
+  white: 'white noise.mp3',
+  birds: 'bird.mp3',
+  wind: 'wind.mp3',
+  meditation: 'deep relaxing.mp3',
+  alpha: 'alpha waves.mp3'
+};
+const SLEEP_MODE_SOUND_MINUTES = 30;
+const ROUTINE_SOUND_MINUTES = 45;
 const soundPlayer = new Audio();
 soundPlayer.loop = true;
 soundPlayer.preload = 'auto';
 let activeSoundKey = null;
 let soundErrorNotifiedKey = null;
+let soundStopTimerId = null;
 
 function apiUrl(path) {
   return `${API_BASE_URL}${path}`;
@@ -536,7 +553,10 @@ const soundNameSpan = document.getElementById('playing-sound-name');
 const soundFreqSpan = document.getElementById('playing-sound-freq');
 
 function getSoundCandidates(soundKey) {
-  return SOUND_EXTENSIONS.map(ext => `assets/sounds/${soundKey}.${ext}`);
+  const mappedFile = SOUND_FILE_MAP[soundKey];
+  const fallbackFiles = SOUND_EXTENSIONS.map(ext => `${soundKey}.${ext}`);
+  const files = mappedFile ? [mappedFile, ...fallbackFiles] : fallbackFiles;
+  return [...new Set(files)].map(file => encodeURI(`assets/sounds/${file}`));
 }
 
 function setActiveSoundUi(soundKey, shouldShowVisualizer = true) {
@@ -555,11 +575,32 @@ function setActiveSoundUi(soundKey, shouldShowVisualizer = true) {
   }
 }
 
+function getSelectedSoundKey(defaultSoundKey = 'white') {
+  return document.querySelector('.sound-item.active')?.dataset.sound || activeSoundKey || defaultSoundKey;
+}
+
 function stopActiveSound() {
   soundPlayer.pause();
   soundPlayer.removeAttribute('src');
   soundPlayer.load();
   activeSoundKey = null;
+  clearSoundStopTimer();
+}
+
+function clearSoundStopTimer() {
+  if (soundStopTimerId) {
+    clearTimeout(soundStopTimerId);
+    soundStopTimerId = null;
+  }
+}
+
+function scheduleSoundStop(minutes) {
+  clearSoundStopTimer();
+  if (!minutes) return;
+  soundStopTimerId = setTimeout(() => {
+    stopActiveSound();
+    setActiveSoundUi(null);
+  }, minutes * 60 * 1000);
 }
 
 function playSoundCandidate(soundKey, candidates, index = 0) {
@@ -580,10 +621,15 @@ function playSoundCandidate(soundKey, candidates, index = 0) {
   }).catch(() => playSoundCandidate(soundKey, candidates, index + 1));
 }
 
-function playSound(soundKey) {
+function playSound(soundKey, stopAfterMinutes = null) {
   if (!soundKey) {
     stopActiveSound();
     return;
+  }
+  if (stopAfterMinutes) {
+    scheduleSoundStop(stopAfterMinutes);
+  } else {
+    clearSoundStopTimer();
   }
   playSoundCandidate(soundKey, getSoundCandidates(soundKey));
 }
@@ -632,12 +678,17 @@ async function toggleSleepMode(btn) {
     btn.innerHTML = '<i class="fa-solid fa-moon" style="margin-right: 8px;"></i> Chế độ ngủ đang bật...';
     btn.style.background = '#10b981';
     btn.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.4)';
-    alert('Khởi động Chế độ Ngủ. Ánh sáng sẽ giảm dần trong 30 phút tới.');
+    const soundKey = getSelectedSoundKey('white');
+    setActiveSoundUi(soundKey);
+    playSound(soundKey, SLEEP_MODE_SOUND_MINUTES);
+    alert(`Khởi động Chế độ Ngủ. Âm thanh sẽ lặp và tự dừng sau ${SLEEP_MODE_SOUND_MINUTES} phút.`);
   } else {
     btn.classList.remove('active-sleep');
     btn.innerHTML = '<i class="fa-solid fa-power-off" style="margin-right: 8px;"></i> Kích hoạt chế độ ngủ';
     btn.style.background = '';
     btn.style.boxShadow = '';
+    stopActiveSound();
+    setActiveSoundUi(null);
   }
 }
 
@@ -690,6 +741,9 @@ async function activateRoutine(btn) {
   }
 
   alert(`Đã lên lịch Sleep Routine! Báo thức tự nhiên sẽ kêu vào ${targetTime} sáng mai.`);
+  const soundKey = getSelectedSoundKey('rain');
+  setActiveSoundUi(soundKey);
+  playSound(soundKey, ROUTINE_SOUND_MINUTES);
   btn.innerHTML = '<i class="fa-solid fa-check" style="margin-right: 8px;"></i> Đã kích hoạt';
   btn.style.background = '#10b981';
 }
