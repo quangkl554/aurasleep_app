@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { Op } = require('sequelize');
 const { User } = require('../models');
 const auth = require('../middleware/auth');
 const { trackActivity, trackSession } = require('../utils/tracking');
@@ -60,9 +61,15 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({ message: 'So dien thoai phai dung dinh dang Viet Nam 10-11 so' });
         }
 
-        const existingUser = await User.findOne({ where: { email: normalizedEmail } });
+        const duplicateConditions = [{ email: normalizedEmail }];
+        if (normalizedPhone) {
+            duplicateConditions.push({ phone: normalizedPhone });
+        }
+
+        const existingUser = await User.findOne({ where: { [Op.or]: duplicateConditions } });
         if (existingUser) {
-            return res.status(400).json({ message: 'Email da duoc su dung' });
+            const field = existingUser.email === normalizedEmail ? 'Email' : 'So dien thoai';
+            return res.status(400).json({ message: `${field} da duoc su dung` });
         }
 
         const salt = await bcrypt.genSalt(10);
@@ -88,7 +95,7 @@ router.post('/register', async (req, res) => {
     } catch (err) {
         console.error('Register error:', err.message);
         if (err.name === 'SequelizeUniqueConstraintError') {
-            return res.status(400).json({ message: 'Email da duoc su dung' });
+            return res.status(400).json({ message: 'Email hoac so dien thoai da duoc su dung' });
         }
         res.status(500).json({ message: 'Loi Server' });
     }
@@ -96,15 +103,21 @@ router.post('/register', async (req, res) => {
 
 router.post('/login', async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, identifier, password } = req.body;
 
-        const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+        const rawIdentifier = typeof identifier === 'string' ? identifier : email;
+        const normalizedIdentifier = typeof rawIdentifier === 'string' ? rawIdentifier.trim() : '';
+        const normalizedEmail = normalizedIdentifier.toLowerCase();
 
-        if (!normalizedEmail || !password) {
-            return res.status(400).json({ message: 'Vui long nhap email va mat khau' });
+        if (!normalizedIdentifier || !password) {
+            return res.status(400).json({ message: 'Vui long nhap email hoac so dien thoai va mat khau' });
         }
 
-        const user = await User.findOne({ where: { email: normalizedEmail } });
+        const where = emailPattern.test(normalizedEmail)
+            ? { email: normalizedEmail }
+            : { phone: normalizedIdentifier };
+
+        const user = await User.findOne({ where });
         if (!user) {
             return res.status(400).json({ message: 'Thong tin dang nhap khong hop le' });
         }

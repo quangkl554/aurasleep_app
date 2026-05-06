@@ -24,6 +24,7 @@ let activeSoundKey = null;
 let soundErrorNotifiedKey = null;
 let soundStopTimerId = null;
 let appAlertCloseHandler = null;
+let appPromptResolver = null;
 const nativeAlert = window.alert.bind(window);
 
 function apiUrl(path) {
@@ -77,6 +78,57 @@ function closeAppAlert() {
 
 window.alert = (message) => showAppAlert(message);
 window.closeAppAlert = closeAppAlert;
+
+function showAppPrompt(message, defaultValue = '', title = 'AuraSleep') {
+  const overlay = document.getElementById('app-prompt');
+  const titleEl = document.getElementById('app-prompt-title');
+  const messageEl = document.getElementById('app-prompt-message');
+  const input = document.getElementById('app-prompt-input');
+
+  if (!overlay || !titleEl || !messageEl || !input) {
+    return Promise.resolve(window.prompt(message, defaultValue));
+  }
+
+  titleEl.textContent = title;
+  messageEl.textContent = String(message || '');
+  input.value = defaultValue || '';
+  overlay.classList.add('active');
+  overlay.setAttribute('aria-hidden', 'false');
+
+  setTimeout(() => {
+    input.focus();
+    input.select();
+  }, 30);
+
+  return new Promise(resolve => {
+    appPromptResolver = resolve;
+  });
+}
+
+function closeAppPrompt(value) {
+  const overlay = document.getElementById('app-prompt');
+  if (overlay) {
+    overlay.classList.remove('active');
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+
+  if (typeof appPromptResolver === 'function') {
+    const resolver = appPromptResolver;
+    appPromptResolver = null;
+    resolver(value);
+  }
+}
+
+function submitAppPrompt() {
+  closeAppPrompt(document.getElementById('app-prompt-input')?.value || '');
+}
+
+function cancelAppPrompt() {
+  closeAppPrompt(null);
+}
+
+window.submitAppPrompt = submitAppPrompt;
+window.cancelAppPrompt = cancelAppPrompt;
 
 function updateUserUi(user) {
   const displayName = user.fullName || 'AURASLEEP';
@@ -183,8 +235,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  const appPrompt = document.getElementById('app-prompt');
+  if (appPrompt) {
+    appPrompt.addEventListener('click', (event) => {
+      if (event.target === appPrompt) cancelAppPrompt();
+    });
+  }
+
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeAppAlert();
+    if (event.key === 'Escape') {
+      closeAppAlert();
+      cancelAppPrompt();
+    }
   });
 
   // Load saved theme
@@ -296,12 +358,12 @@ async function fetchUserInfo(token) {
 }
 
 // API Login
-async function handleLogin(email, password) {
+async function handleLogin(identifier, password) {
   try {
     const res = await apiFetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ identifier, email: identifier, password })
     });
     
     if (res.ok) {
@@ -322,20 +384,20 @@ async function handleLogin(email, password) {
 
 async function handleLoginFromForm(button) {
   const form = document.getElementById('login-form');
-  const emailInput = form?.querySelector('input[type="email"]');
-  const passInput = form?.querySelector('input[type="password"]');
-  const email = emailInput?.value.trim();
+  const identifierInput = form?.querySelector('[name="identifier"]');
+  const passInput = form?.querySelector('[name="password"]');
+  const identifier = identifierInput?.value.trim();
   const password = passInput?.value;
 
-  if (!email || !password) {
-    alert('Vui long nhap email va mat khau.');
+  if (!identifier || !password) {
+    alert('Vui lòng nhập email hoặc số điện thoại và mật khẩu.');
     return;
   }
 
   const originalText = button.textContent;
   button.disabled = true;
-  button.textContent = 'Dang dang nhap...';
-  await handleLogin(email, password);
+  button.textContent = 'Đang đăng nhập...';
+  await handleLogin(identifier, password);
   button.disabled = false;
   button.textContent = originalText;
 }
@@ -382,30 +444,36 @@ async function handleRegisterFromForm(button) {
   const email = form?.querySelector('[name="email"]')?.value.trim();
   const phone = form?.querySelector('[name="phone"]')?.value.trim();
   const password = form?.querySelector('[name="password"]')?.value;
+  const confirmPassword = form?.querySelector('[name="confirmPassword"]')?.value;
 
   if (!fullName || !email || !password) {
-    alert('Vui long nhap ho ten, email va mat khau.');
+    alert('Vui lòng nhập họ tên, email và mật khẩu.');
     return;
   }
 
   if (fullName.length > 50) {
-    alert('Ho ten khong duoc vuot qua 50 ky tu.');
+    alert('Họ tên không được vượt quá 50 ký tự.');
     return;
   }
 
   if (password.length < 6 || password.length > 30) {
-    alert('Mat khau phai tu 6 den 30 ky tu.');
+    alert('Mật khẩu phải từ 6 đến 30 ký tự.');
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    alert('Mật khẩu nhập lại chưa trùng khớp.');
     return;
   }
 
   if (phone && !/^(0|\+84)(\d{9}|\d{10})$/.test(phone)) {
-    alert('So dien thoai phai dung dinh dang Viet Nam 10-11 so.');
+    alert('Số điện thoại phải đúng định dạng Việt Nam 10-11 số.');
     return;
   }
 
   const originalText = button.textContent;
   button.disabled = true;
-  button.textContent = 'Dang tao...';
+  button.textContent = 'Đang tạo...';
   await handleRegister(fullName, email, password, phone);
   button.disabled = false;
   button.textContent = originalText;
@@ -765,6 +833,16 @@ async function fetchRoutines() {
 async function activateRoutine(btn) {
   const timeDivs = document.querySelectorAll('.routine-time');
   const targetTime = timeDivs.length > 0 ? timeDivs[0].textContent : '22:00';
+
+  if (btn.classList.contains('routine-active')) {
+    stopActiveSound();
+    setActiveSoundUi(null);
+    btn.classList.remove('routine-active');
+    btn.innerHTML = '<i class="fa-solid fa-play" style="margin-right: 8px;"></i> Kích hoạt Routine Này';
+    btn.style.background = '';
+    alert('Đã hủy Routine và dừng âm thanh.');
+    return;
+  }
   
   const token = localStorage.getItem('aurasleep_token');
   if (token) {
@@ -790,6 +868,7 @@ async function activateRoutine(btn) {
   const soundKey = getSelectedSoundKey('rain');
   setActiveSoundUi(soundKey);
   playSound(soundKey, ROUTINE_SOUND_MINUTES);
+  btn.classList.add('routine-active');
   btn.innerHTML = '<i class="fa-solid fa-check" style="margin-right: 8px;"></i> Đã kích hoạt';
   btn.style.background = '#10b981';
 }
@@ -1053,13 +1132,18 @@ function selectBar(element) {
 }
 
 // Edit Time Function
-function editTime(btn) {
+async function editTime(btn) {
   const timeDiv = btn.parentElement.querySelector('.routine-time');
   if (timeDiv) {
     const currentTime = timeDiv.textContent;
-    const newTime = prompt('Nhập thời gian mới (HH:MM):', currentTime);
+    const newTime = await showAppPrompt('Nhập thời gian mới theo định dạng HH:MM.', currentTime, 'Chỉnh thời gian');
     if (newTime && newTime.trim() !== '') {
-      timeDiv.textContent = newTime.trim();
+      const trimmedTime = newTime.trim();
+      if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(trimmedTime)) {
+        alert('Thời gian phải đúng định dạng HH:MM, ví dụ 22:00.');
+        return;
+      }
+      timeDiv.textContent = trimmedTime;
     }
   }
 }

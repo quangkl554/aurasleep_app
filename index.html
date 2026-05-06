@@ -39,33 +39,36 @@
           <div class="auth-tab">Đăng ký</div>
         </div>
         
-        <form id="login-form">
+        <form id="login-form" onsubmit="handleLoginFromForm(this.querySelector('button')); return false;">
           <div class="form-group">
-            <input type="email" class="form-input" placeholder="Email hoặc Số điện thoại">
+            <input type="text" class="form-input" name="identifier" placeholder="Email hoặc số điện thoại" autocomplete="username">
           </div>
           <div class="form-group">
-            <input type="password" class="form-input" placeholder="Mật khẩu">
+            <input type="password" class="form-input" name="password" placeholder="Mật khẩu" autocomplete="current-password">
           </div>
           <div style="text-align: right; margin-bottom: 20px;">
             <a href="#" style="color: var(--accent-secondary); font-size: 13px; text-decoration: none;">Quên mật khẩu?</a>
           </div>
-          <button type="button" class="btn btn-primary w-100" onclick="handleLoginFromForm(this)">Đăng nhập ngay</button>
+          <button type="submit" class="btn btn-primary w-100">Đăng nhập ngay</button>
         </form>
         
-        <form id="register-form" style="display: none;">
+        <form id="register-form" style="display: none;" onsubmit="handleRegisterFromForm(this.querySelector('button')); return false;">
           <div class="form-group">
-            <input type="text" class="form-input" name="fullName" placeholder="Ho ten" maxlength="50">
+            <input type="text" class="form-input" name="fullName" placeholder="Họ tên" maxlength="50" autocomplete="name">
           </div>
           <div class="form-group">
-            <input type="email" class="form-input" name="email" placeholder="Email" maxlength="255">
+            <input type="email" class="form-input" name="email" placeholder="Email" maxlength="255" autocomplete="email">
           </div>
           <div class="form-group">
-            <input type="tel" class="form-input" name="phone" placeholder="So dien thoai Viet Nam tuy chon" inputmode="tel" maxlength="11">
+            <input type="tel" class="form-input" name="phone" placeholder="Số điện thoại" inputmode="tel" maxlength="11" autocomplete="tel">
           </div>
           <div class="form-group">
-            <input type="password" class="form-input" name="password" placeholder="Mat khau 6-30 ky tu" minlength="6" maxlength="30">
+            <input type="password" class="form-input" name="password" placeholder="Mật khẩu 6-30 ký tự" minlength="6" maxlength="30" autocomplete="new-password">
           </div>
-          <button type="button" class="btn btn-primary w-100" onclick="handleRegisterFromForm(this)">Tao tai khoan</button>
+          <div class="form-group">
+            <input type="password" class="form-input" name="confirmPassword" placeholder="Nhập lại mật khẩu" minlength="6" maxlength="30" autocomplete="new-password">
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Tạo tài khoản</button>
         </form>
 
         <div class="social-login">
@@ -684,6 +687,23 @@
       </div>
       <button class="app-alert-button" type="button" onclick="closeAppAlert()">OK</button>
     </div>
+  </div>
+
+  <div id="app-prompt" class="app-alert-overlay" aria-hidden="true">
+    <form class="app-alert-dialog app-prompt-dialog" onsubmit="submitAppPrompt(); return false;">
+      <div class="app-alert-icon">
+        <i class="fa-solid fa-clock"></i>
+      </div>
+      <div class="app-alert-content">
+        <h3 id="app-prompt-title">AuraSleep</h3>
+        <p id="app-prompt-message"></p>
+      </div>
+      <input id="app-prompt-input" class="form-input app-prompt-input" type="text">
+      <div class="app-prompt-actions">
+        <button class="app-prompt-secondary" type="button" onclick="cancelAppPrompt()">Hủy</button>
+        <button class="app-alert-button app-prompt-primary" type="submit">Lưu</button>
+      </div>
+    </form>
   </div>
 
 </div>
