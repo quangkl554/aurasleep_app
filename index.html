@@ -132,7 +132,7 @@
       <div class="quick-actions">
         <div class="action-btn" onclick="navigateTo('routine')">
           <div class="action-icon"><i class="fa-solid fa-moon"></i></div>
-          <span>Ngủ ngay</span>
+          <span>Thư giãn</span>
         </div>
         <div class="action-btn" onclick="navigateTo('device')">
           <div class="action-icon"><i class="fa-solid fa-lightbulb"></i></div>
@@ -592,60 +592,78 @@
     <div class="top-header">
       <div style="display: flex; align-items: center; gap: 12px;">
         <div class="icon-btn" onclick="navigateTo('dashboard')"><i class="fa-solid fa-arrow-left"></i></div>
-        <h2 style="margin: 0;">Routine Của Bạn</h2>
+        <h2 style="margin: 0;">Thư Giãn Trước Ngủ</h2>
       </div>
     </div>
 
     <div class="content-padding">
-      <p style="margin-bottom: 20px;">Thiết lập chu kỳ thư giãn và thức dậy tự nhiên để tối ưu hóa năng lượng.</p>
+      <p style="margin-bottom: 20px;">Chọn âm thanh và thời điểm bắt đầu để AuraSleep dẫn bạn vào giấc ngủ nhẹ nhàng hơn.</p>
+
+      <div class="section-title">
+        <h3>Âm thanh sẽ phát</h3>
+        <a href="#" onclick="navigateTo('device')">Kho âm thanh</a>
+      </div>
+
+      <div class="routine-sound-picker" id="routine-sound-picker">
+        <button type="button" class="routine-sound-option active" data-routine-sound="rain" onclick="selectRoutineSound(this)">
+          <i class="fa-solid fa-cloud-rain"></i>
+          <span>Mưa rào</span>
+        </button>
+        <button type="button" class="routine-sound-option" data-routine-sound="ocean" onclick="selectRoutineSound(this)">
+          <i class="fa-solid fa-water"></i>
+          <span>Sóng biển</span>
+        </button>
+        <button type="button" class="routine-sound-option" data-routine-sound="piano" onclick="selectRoutineSound(this)">
+          <i class="fa-solid fa-music"></i>
+          <span>Piano</span>
+        </button>
+        <button type="button" class="routine-sound-option" data-routine-sound="meditation" onclick="selectRoutineSound(this)">
+          <i class="fa-solid fa-om"></i>
+          <span>Thiền sâu</span>
+        </button>
+      </div>
 
       <!-- Timeline -->
-      <div class="glass-panel" style="padding: 24px; position: relative; margin-bottom: 30px;">
+      <div class="glass-panel routine-timeline">
         <!-- Vertical Line -->
-        <div style="position: absolute; left: 36px; top: 30px; bottom: 30px; width: 2px; background: var(--border);"></div>
+        <div class="routine-line"></div>
 
         <!-- Step 1 -->
-        <div style="display: flex; gap: 16px; margin-bottom: 30px; position: relative; z-index: 2;">
-          <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--accent-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 0 10px rgba(244,162,97,0.5);"></div>
+        <div class="routine-step">
+          <div class="routine-dot active"><i class="fa-solid fa-play"></i></div>
           <div style="flex: 1;">
             <div style="font-size: 18px; font-weight: 700; margin-bottom: 4px;" class="routine-time">22:00</div>
             <div style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">Bắt đầu thư giãn</div>
-            <p style="font-size: 12px;">Ánh sáng ấm 30%. Âm thanh: Mưa rơi nhỏ.</p>
+            <p style="font-size: 12px;">Phát <span class="routine-selected-sound">Mưa rào</span> với âm lượng nhẹ, ánh sáng ấm 30%.</p>
           </div>
-          <div onclick="editTime(this)" style="width: 32px; height: 32px; border-radius: 50%; background: var(--card-bg); display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid var(--border);">
-            <i class="fa-solid fa-pen" style="color: var(--text-secondary); font-size: 12px;"></i>
-          </div>
+          <button type="button" class="routine-edit-btn" onclick="editTime(this)"><i class="fa-solid fa-pen"></i></button>
         </div>
 
         <!-- Step 2 -->
-        <div style="display: flex; gap: 16px; margin-bottom: 30px; position: relative; z-index: 2;">
-          <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--card-bg); border: 2px solid var(--border); flex-shrink: 0;"></div>
+        <div class="routine-step">
+          <div class="routine-dot muted"><i class="fa-solid fa-volume-low"></i></div>
           <div style="flex: 1;">
             <div style="font-size: 18px; font-weight: 700; margin-bottom: 4px;" class="routine-time">22:30</div>
             <div style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">Đi vào giấc ngủ</div>
-            <p style="font-size: 12px;">Tắt đèn (Fade-out). Âm thanh nhỏ dần sau 15p.</p>
+            <p style="font-size: 12px;">Âm thanh tiếp tục lặp và tự dừng sau 45 phút để không làm gián đoạn giấc ngủ.</p>
           </div>
-          <div onclick="editTime(this)" style="width: 32px; height: 32px; border-radius: 50%; background: var(--card-bg); display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid var(--border);">
-            <i class="fa-solid fa-pen" style="color: var(--text-secondary); font-size: 12px;"></i>
-          </div>
+          <button type="button" class="routine-edit-btn" onclick="editTime(this)"><i class="fa-solid fa-pen"></i></button>
         </div>
 
         <!-- Step 3 -->
-        <div style="display: flex; gap: 16px; position: relative; z-index: 2;">
-          <div style="width: 24px; height: 24px; border-radius: 50%; background: #10b981; flex-shrink: 0; box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);"></div>
+        <div class="routine-step">
+          <div class="routine-dot wake"><i class="fa-solid fa-sun"></i></div>
           <div style="flex: 1;">
             <div style="font-size: 18px; font-weight: 700; margin-bottom: 4px;" class="routine-time">06:30</div>
             <div style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">Báo thức bình minh</div>
-            <p style="font-size: 12px;">Ánh sáng sáng dần trong 20p. Tiếng chim hót.</p>
+            <p style="font-size: 12px;">Ánh sáng sáng dần trong 20 phút, phù hợp cho bản demo thức dậy tự nhiên.</p>
           </div>
-          <div onclick="editTime(this)" style="width: 32px; height: 32px; border-radius: 50%; background: var(--card-bg); display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid var(--border);">
-            <i class="fa-solid fa-pen" style="color: var(--text-secondary); font-size: 12px;"></i>
-          </div>
+          <button type="button" class="routine-edit-btn" onclick="editTime(this)"><i class="fa-solid fa-pen"></i></button>
         </div>
       </div>
 
       <button class="btn btn-primary w-100" onclick="activateRoutine(this)">
-        <i class="fa-solid fa-play" style="margin-right: 8px;"></i> Kích hoạt Routine Này
+        <i class="fa-solid fa-play" style="margin-right: 8px;"></i> Bắt đầu thư giãn
       </button>
     </div>
   </section>

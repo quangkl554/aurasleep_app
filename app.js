@@ -690,8 +690,32 @@ function setActiveSoundUi(soundKey, shouldShowVisualizer = true) {
 }
 
 function getSelectedSoundKey(defaultSoundKey = 'white') {
-  return document.querySelector('.sound-item.active')?.dataset.sound || activeSoundKey || defaultSoundKey;
+  return document.querySelector('.routine-sound-option.active')?.dataset.routineSound
+    || document.querySelector('.sound-item.active')?.dataset.sound
+    || activeSoundKey
+    || defaultSoundKey;
 }
+
+function getSoundLabel(soundKey) {
+  const routineOption = document.querySelector(`.routine-sound-option[data-routine-sound="${soundKey}"] span`);
+  if (routineOption) return routineOption.textContent;
+  const soundItem = document.querySelector(`.sound-item[data-sound="${soundKey}"] span`);
+  return soundItem?.textContent || soundKey;
+}
+
+function selectRoutineSound(button) {
+  document.querySelectorAll('.routine-sound-option').forEach(option => {
+    option.classList.remove('active');
+  });
+  button.classList.add('active');
+  const soundKey = button.dataset.routineSound;
+  document.querySelectorAll('.routine-selected-sound').forEach(el => {
+    el.textContent = getSoundLabel(soundKey);
+  });
+  setActiveSoundUi(soundKey, false);
+}
+
+window.selectRoutineSound = selectRoutineSound;
 
 function stopActiveSound() {
   soundPlayer.pause();
@@ -838,7 +862,7 @@ async function activateRoutine(btn) {
     stopActiveSound();
     setActiveSoundUi(null);
     btn.classList.remove('routine-active');
-    btn.innerHTML = '<i class="fa-solid fa-play" style="margin-right: 8px;"></i> Kích hoạt Routine Này';
+    btn.innerHTML = '<i class="fa-solid fa-play" style="margin-right: 8px;"></i> Bắt đầu thư giãn';
     btn.style.background = '';
     alert('Đã hủy Routine và dừng âm thanh.');
     return;
@@ -864,13 +888,13 @@ async function activateRoutine(btn) {
     } catch (e) { console.error(e); }
   }
 
-  alert(`Đã lên lịch Sleep Routine! Báo thức tự nhiên sẽ kêu vào ${targetTime} sáng mai.`);
   const soundKey = getSelectedSoundKey('rain');
   setActiveSoundUi(soundKey);
   playSound(soundKey, ROUTINE_SOUND_MINUTES);
   btn.classList.add('routine-active');
-  btn.innerHTML = '<i class="fa-solid fa-check" style="margin-right: 8px;"></i> Đã kích hoạt';
+  btn.innerHTML = '<i class="fa-solid fa-stop" style="margin-right: 8px;"></i> Dừng thư giãn';
   btn.style.background = '#10b981';
+  alert(`Đã bắt đầu routine với âm thanh ${getSoundLabel(soundKey)}. Âm thanh sẽ tự dừng sau ${ROUTINE_SOUND_MINUTES} phút.`);
 }
 
 // Logout Confirmation
