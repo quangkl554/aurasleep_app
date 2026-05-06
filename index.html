@@ -129,6 +129,18 @@
         </div>
       </div>
 
+      <div id="dashboard-sleep-entry-card" class="sleep-entry-card glass-panel">
+        <div>
+          <span class="sleep-entry-kicker">Dữ liệu cá nhân</span>
+          <h3 id="dashboard-entry-title">Ghi nhận giấc ngủ đầu tiên</h3>
+          <p id="dashboard-entry-copy">Nhập giờ ngủ tối qua để AuraSleep bắt đầu phân tích bằng dữ liệu thật của bạn.</p>
+        </div>
+        <button class="sleep-entry-button" type="button" onclick="openSleepEntryModal()">
+          <i class="fa-solid fa-plus"></i>
+          <span>Ghi nhận</span>
+        </button>
+      </div>
+
       <div class="quick-actions">
         <div class="action-btn" onclick="navigateTo('routine')">
           <div class="action-icon"><i class="fa-solid fa-moon"></i></div>
@@ -719,6 +731,47 @@
       <div class="app-prompt-actions">
         <button class="app-prompt-secondary" type="button" onclick="cancelAppPrompt()">Hủy</button>
         <button class="app-alert-button app-prompt-primary" type="submit">Lưu</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="sleep-entry-modal" class="app-alert-overlay" aria-hidden="true">
+    <form class="app-alert-dialog sleep-entry-dialog" onsubmit="submitSleepEntry(event)">
+      <div class="app-alert-icon">
+        <i class="fa-solid fa-bed"></i>
+      </div>
+      <div class="app-alert-content">
+        <h3>Ghi nhận giấc ngủ</h3>
+        <p>Nhập dữ liệu tối qua. AuraSleep sẽ tự tính điểm ngủ và cập nhật dashboard.</p>
+      </div>
+
+      <div class="sleep-entry-grid">
+        <label>
+          <span>Ngày ngủ</span>
+          <input class="form-input" type="date" name="date" required>
+        </label>
+        <label>
+          <span>Giờ đi ngủ</span>
+          <input class="form-input" type="time" name="bedtime" required>
+        </label>
+        <label>
+          <span>Giờ thức dậy</span>
+          <input class="form-input" type="time" name="wakeTime" required>
+        </label>
+        <label>
+          <span>Chìm giấc sau</span>
+          <input class="form-input" type="number" name="fallAsleepMin" min="0" max="180" value="15" required>
+        </label>
+      </div>
+
+      <label class="sleep-entry-note">
+        <span>Ghi chú</span>
+        <textarea class="form-input" name="notes" rows="3" placeholder="Ví dụ: uống cà phê muộn, tập thể dục, stress..."></textarea>
+      </label>
+
+      <div class="app-prompt-actions">
+        <button class="app-prompt-secondary" type="button" onclick="closeSleepEntryModal()">Hủy</button>
+        <button class="app-alert-button app-prompt-primary" type="submit">Lưu dữ liệu</button>
       </div>
     </form>
   </div>

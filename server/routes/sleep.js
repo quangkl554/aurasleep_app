@@ -43,31 +43,51 @@ router.get('/', auth, async (req, res) => {
 // @access  Private
 router.post('/', auth, async (req, res) => {
     try {
-        const { date, bedtime, wakeTime, totalSleepMin, sleepScore, efficiency, fallAsleepMin } = req.body;
+        const { date, bedtime, wakeTime, totalSleepMin, sleepScore, efficiency, fallAsleepMin, notes } = req.body;
 
-        const newRecord = await SleepRecord.create({
-            userId: req.user.id,
-            date,
+        if (!date || !bedtime || !wakeTime || !Number.isInteger(totalSleepMin)) {
+            return res.status(400).json({ message: 'Du lieu giac ngu khong hop le' });
+        }
+
+        if (totalSleepMin < 60 || totalSleepMin > 900) {
+            return res.status(400).json({ message: 'Thoi luong ngu can nam trong khoang 1 den 15 tieng' });
+        }
+
+        const payload = {
             bedtime,
             wakeTime,
             totalSleepMin,
-            sleepScore,
-            efficiency,
-            fallAsleepMin
+            sleepScore: Number.isInteger(sleepScore) ? sleepScore : 0,
+            efficiency: Number.isInteger(efficiency) ? efficiency : 0,
+            fallAsleepMin: Number.isInteger(fallAsleepMin) ? fallAsleepMin : 0,
+            notes: typeof notes === 'string' ? notes.trim() : null
+        };
+
+        const [record, created] = await SleepRecord.findOrCreate({
+            where: { userId: req.user.id, date },
+            defaults: {
+                userId: req.user.id,
+                date,
+                ...payload
+            }
         });
+
+        if (!created) {
+            await record.update(payload);
+        }
 
         await trackActivity(req, {
             userId: req.user.id,
-            eventType: 'sleep_record_created',
+            eventType: created ? 'sleep_record_created' : 'sleep_record_updated',
             entityType: 'sleep_record',
-            entityId: newRecord.id,
+            entityId: record.id,
             metadata: { date, totalSleepMin, sleepScore, efficiency, fallAsleepMin }
         });
 
-        res.json(newRecord);
+        res.json(record);
     } catch (err) {
         console.error(err.message);
-        res.status(500).send('Lỗi Server');
+        res.status(500).json({ message: 'Loi Server' });
     }
 });
 
