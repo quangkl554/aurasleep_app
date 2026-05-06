@@ -803,13 +803,25 @@ input[type=range]::-webkit-slider-thumb {
 }
 
 .routine-sound-picker {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  display: flex;
   gap: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  padding: 2px 2px 12px;
+  margin-left: -2px;
+  margin-right: -2px;
   margin-bottom: 22px;
 }
 
+.routine-sound-picker::-webkit-scrollbar {
+  display: none;
+}
+
 .routine-sound-option {
+  flex: 0 0 auto;
+  min-width: 142px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -822,6 +834,7 @@ input[type=range]::-webkit-slider-thumb {
   font-weight: 700;
   cursor: pointer;
   text-align: left;
+  scroll-snap-align: start;
   transition: border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
 }
 
