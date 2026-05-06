@@ -7,16 +7,49 @@ const { trackActivity } = require('../utils/tracking');
 const GROQ_API_URL = process.env.GROQ_API_URL || 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
+function buildFallbackReply(message) {
+    const text = String(message || '').toLowerCase();
+
+    if (text.includes('khó ngủ') || text.includes('kho ngu') || text.includes('mất ngủ') || text.includes('mat ngu')) {
+        return [
+            'Mình đang dùng chế độ AuraBot dự phòng vì AI cloud chưa phản hồi ổn định.',
+            '',
+            'Tối nay bạn có thể thử routine 20-30 phút:',
+            '- Giảm ánh sáng màn hình và đèn phòng.',
+            '- Chọn âm thanh nhẹ như Mưa rào, Sóng biển hoặc Thiền sâu.',
+            '- Hít vào 4 giây, giữ 2 giây, thở ra 6 giây trong 5 phút.',
+            '- Nếu sau 20 phút vẫn tỉnh táo, rời giường một lúc và quay lại khi buồn ngủ.'
+        ].join('\n');
+    }
+
+    if (text.includes('âm thanh') || text.includes('am thanh') || text.includes('nhạc') || text.includes('nhac')) {
+        return [
+            'Mình đang dùng chế độ AuraBot dự phòng vì AI cloud chưa phản hồi ổn định.',
+            '',
+            'Gợi ý âm thanh:',
+            '- Mưa rào: phù hợp khi cần che tiếng ồn bên ngoài.',
+            '- Sóng biển: nhịp đều, dễ thư giãn.',
+            '- Brown Noise hoặc Pink Noise: phù hợp khi cần âm nền ổn định.',
+            '- Thiền sâu hoặc Piano: phù hợp trước khi ngủ 15-30 phút.'
+        ].join('\n');
+    }
+
+    return [
+        'Mình đang dùng chế độ AuraBot dự phòng vì AI cloud chưa phản hồi ổn định.',
+        '',
+        'Bạn có thể bắt đầu bằng 3 việc đơn giản:',
+        '- Ghi nhận giấc ngủ tối qua để dashboard có dữ liệu thật.',
+        '- Chọn một routine thư giãn 30-45 phút.',
+        '- Giữ giờ ngủ/thức dậy ổn định trong vài ngày để AuraSleep phân tích chính xác hơn.'
+    ].join('\n');
+}
+
 router.post('/send', auth, async (req, res) => {
     try {
         const { sessionId, message } = req.body;
 
         if (!message || typeof message !== 'string' || message.trim().length === 0) {
             return res.status(400).json({ message: 'Tin nhan khong hop le' });
-        }
-
-        if (!process.env.GROQ_API_KEY) {
-            return res.status(503).json({ message: 'Groq API key chua duoc cau hinh' });
         }
 
         let currentSessionId = sessionId;
@@ -68,28 +101,41 @@ router.post('/send', auth, async (req, res) => {
             ...formattedHistory
         ];
 
-        const response = await fetch(GROQ_API_URL, {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: GROQ_MODEL,
-                messages: apiMessages,
-                temperature: 0.7,
-                max_tokens: 500
-            })
-        });
+        let botReply = '';
+        let aiMode = 'groq';
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Groq API error:', errorText);
-            return res.status(502).json({ message: 'AI service dang ban' });
+        if (!process.env.GROQ_API_KEY) {
+            aiMode = 'fallback_no_key';
+            botReply = buildFallbackReply(message);
+        } else {
+            try {
+                const response = await fetch(GROQ_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: GROQ_MODEL,
+                        messages: apiMessages,
+                        temperature: 0.7,
+                        max_tokens: 500
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Groq API error ${response.status}: ${errorText}`);
+                }
+
+                const data = await response.json();
+                botReply = data.choices?.[0]?.message?.content || 'AuraBot chua co phan hoi.';
+            } catch (aiErr) {
+                aiMode = 'fallback_ai_error';
+                console.error('AuraBot AI fallback:', aiErr.message);
+                botReply = buildFallbackReply(message);
+            }
         }
-
-        const data = await response.json();
-        const botReply = data.choices?.[0]?.message?.content || 'AuraBot chua co phan hoi.';
 
         await ChatMessage.create({
             sessionId: currentSessionId,
@@ -103,7 +149,7 @@ router.post('/send', auth, async (req, res) => {
             entityType: 'chat_session',
             entityId: currentSessionId,
             metadata: {
-                model: GROQ_MODEL,
+                model: aiMode === 'groq' ? GROQ_MODEL : aiMode,
                 messageLength: message.trim().length,
                 replyLength: botReply.length
             }
