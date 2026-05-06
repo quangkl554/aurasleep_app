@@ -673,6 +673,19 @@
     </div>
   </nav>
 
+  <div id="app-alert" class="app-alert-overlay" aria-hidden="true">
+    <div class="app-alert-dialog" role="dialog" aria-modal="true" aria-labelledby="app-alert-title">
+      <div class="app-alert-icon">
+        <i class="fa-solid fa-moon"></i>
+      </div>
+      <div class="app-alert-content">
+        <h3 id="app-alert-title">AuraSleep</h3>
+        <p id="app-alert-message"></p>
+      </div>
+      <button class="app-alert-button" type="button" onclick="closeAppAlert()">OK</button>
+    </div>
+  </div>
+
 </div>
 
 <script src="config.js"></script>

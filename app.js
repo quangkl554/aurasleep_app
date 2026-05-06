@@ -23,6 +23,8 @@ soundPlayer.preload = 'auto';
 let activeSoundKey = null;
 let soundErrorNotifiedKey = null;
 let soundStopTimerId = null;
+let appAlertCloseHandler = null;
+const nativeAlert = window.alert.bind(window);
 
 function apiUrl(path) {
   return `${API_BASE_URL}${path}`;
@@ -42,6 +44,39 @@ function clearSession() {
     el.textContent = 'AS';
   });
 }
+
+function showAppAlert(message, title = 'AuraSleep') {
+  const overlay = document.getElementById('app-alert');
+  const titleEl = document.getElementById('app-alert-title');
+  const messageEl = document.getElementById('app-alert-message');
+
+  if (!overlay || !titleEl || !messageEl) {
+    nativeAlert(String(message || ''));
+    return;
+  }
+
+  titleEl.textContent = title;
+  messageEl.textContent = String(message || '');
+  overlay.classList.add('active');
+  overlay.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('alert-open');
+}
+
+function closeAppAlert() {
+  const overlay = document.getElementById('app-alert');
+  if (!overlay) return;
+  overlay.classList.remove('active');
+  overlay.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('alert-open');
+  if (typeof appAlertCloseHandler === 'function') {
+    const handler = appAlertCloseHandler;
+    appAlertCloseHandler = null;
+    handler();
+  }
+}
+
+window.alert = (message) => showAppAlert(message);
+window.closeAppAlert = closeAppAlert;
 
 function updateUserUi(user) {
   const displayName = user.fullName || 'AURASLEEP';
@@ -141,6 +176,17 @@ function hideSplash(delay = 0) {
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', async () => {
+  const appAlert = document.getElementById('app-alert');
+  if (appAlert) {
+    appAlert.addEventListener('click', (event) => {
+      if (event.target === appAlert) closeAppAlert();
+    });
+  }
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeAppAlert();
+  });
+
   // Load saved theme
   const savedTheme = localStorage.getItem('aurasleep_theme') || 'dark';
   document.documentElement.setAttribute('data-theme', savedTheme);
