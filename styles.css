@@ -210,6 +210,19 @@ body {
   cursor: pointer;
 }
 
+.app-confirm-dialog {
+  text-align: center;
+}
+
+.app-confirm-icon,
+.app-confirm-primary {
+  background: linear-gradient(135deg, #ef4444, #f97316);
+}
+
+.app-confirm-primary {
+  box-shadow: 0 10px 26px rgba(239, 68, 68, 0.22);
+}
+
 @media (min-width: 431px) {
   body {
     align-items: center;

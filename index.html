@@ -767,6 +767,22 @@
     </form>
   </div>
 
+  <div id="app-confirm" class="app-alert-overlay" aria-hidden="true">
+    <div class="app-alert-dialog app-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="app-confirm-title">
+      <div class="app-alert-icon app-confirm-icon">
+        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+      </div>
+      <div class="app-alert-content">
+        <h3 id="app-confirm-title">Xác nhận đăng xuất</h3>
+        <p id="app-confirm-message">Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng không?</p>
+      </div>
+      <div class="app-prompt-actions">
+        <button class="app-prompt-secondary" type="button" onclick="resolveAppConfirm(false)">Hủy</button>
+        <button class="app-alert-button app-confirm-primary" type="button" onclick="resolveAppConfirm(true)">Đăng xuất</button>
+      </div>
+    </div>
+  </div>
+
   <div id="sleep-entry-modal" class="app-alert-overlay" aria-hidden="true">
     <form class="app-alert-dialog sleep-entry-dialog" onsubmit="submitSleepEntry(event)">
       <div class="app-alert-icon">

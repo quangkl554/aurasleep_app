@@ -25,6 +25,7 @@ let soundErrorNotifiedKey = null;
 let soundStopTimerId = null;
 let appAlertCloseHandler = null;
 let appPromptResolver = null;
+let appConfirmResolver = null;
 const nativeAlert = window.alert.bind(window);
 
 function apiUrl(path) {
@@ -137,6 +138,41 @@ function cancelAppPrompt() {
 
 window.submitAppPrompt = submitAppPrompt;
 window.cancelAppPrompt = cancelAppPrompt;
+
+function showAppConfirm(message, title = 'Xác nhận') {
+  const overlay = document.getElementById('app-confirm');
+  const titleEl = document.getElementById('app-confirm-title');
+  const messageEl = document.getElementById('app-confirm-message');
+
+  if (!overlay || !titleEl || !messageEl) {
+    return Promise.resolve(window.confirm(message));
+  }
+
+  titleEl.textContent = title;
+  messageEl.textContent = String(message || '');
+  overlay.classList.add('active');
+  overlay.setAttribute('aria-hidden', 'false');
+
+  return new Promise(resolve => {
+    appConfirmResolver = resolve;
+  });
+}
+
+function resolveAppConfirm(value) {
+  const overlay = document.getElementById('app-confirm');
+  if (overlay) {
+    overlay.classList.remove('active');
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+
+  if (typeof appConfirmResolver === 'function') {
+    const resolver = appConfirmResolver;
+    appConfirmResolver = null;
+    resolver(Boolean(value));
+  }
+}
+
+window.resolveAppConfirm = resolveAppConfirm;
 
 function getTodayDateString() {
   const now = new Date();
@@ -371,11 +407,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  const appConfirm = document.getElementById('app-confirm');
+  if (appConfirm) {
+    appConfirm.addEventListener('click', (event) => {
+      if (event.target === appConfirm) resolveAppConfirm(false);
+    });
+  }
+
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
       closeAppAlert();
       cancelAppPrompt();
       closeSleepEntryModal();
+      resolveAppConfirm(false);
     }
   });
 
@@ -1028,8 +1072,8 @@ async function activateRoutine(btn) {
 }
 
 // Logout Confirmation
-function confirmLogout() {
-  const res = confirm("Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng không?");
+async function confirmLogout() {
+  const res = await showAppConfirm('Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng không?', 'Xác nhận đăng xuất');
   if (res) {
     clearSession();
     navigateTo('login');
