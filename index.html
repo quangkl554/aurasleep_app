@@ -52,6 +52,22 @@
           <button type="button" class="btn btn-primary w-100" onclick="handleLoginFromForm(this)">Đăng nhập ngay</button>
         </form>
         
+        <form id="register-form" style="display: none;">
+          <div class="form-group">
+            <input type="text" class="form-input" name="fullName" placeholder="Ho ten" maxlength="100">
+          </div>
+          <div class="form-group">
+            <input type="email" class="form-input" name="email" placeholder="Email" maxlength="255">
+          </div>
+          <div class="form-group">
+            <input type="tel" class="form-input" name="phone" placeholder="So dien thoai tuy chon" maxlength="20">
+          </div>
+          <div class="form-group">
+            <input type="password" class="form-input" name="password" placeholder="Mat khau 6-72 ky tu" minlength="6" maxlength="72">
+          </div>
+          <button type="button" class="btn btn-primary w-100" onclick="handleRegisterFromForm(this)">Tao tai khoan</button>
+        </form>
+
         <div class="social-login">
           <p>Hoặc đăng nhập với</p>
           <div class="social-icons">

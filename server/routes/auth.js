@@ -5,6 +5,8 @@ const jwt = require('jsonwebtoken');
 const { User } = require('../models');
 const auth = require('../middleware/auth');
 
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function signToken(userId) {
     if (!process.env.JWT_SECRET) {
         throw new Error('JWT_SECRET is missing');
@@ -32,16 +34,30 @@ function publicUser(user) {
 router.post('/register', async (req, res) => {
     try {
         const { fullName, email, password, phone } = req.body;
+        const normalizedName = typeof fullName === 'string' ? fullName.trim() : '';
+        const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+        const normalizedPhone = typeof phone === 'string' ? phone.trim() : null;
 
-        if (!fullName || !email || !password) {
+        if (!normalizedName || !normalizedEmail || !password) {
             return res.status(400).json({ message: 'Vui long nhap day du ho ten, email va mat khau' });
         }
 
-        if (password.length < 6) {
-            return res.status(400).json({ message: 'Mat khau phai co it nhat 6 ky tu' });
+        if (normalizedName.length > 100) {
+            return res.status(400).json({ message: 'Ho ten khong duoc vuot qua 100 ky tu' });
         }
 
-        const normalizedEmail = email.trim().toLowerCase();
+        if (!emailPattern.test(normalizedEmail) || normalizedEmail.length > 255) {
+            return res.status(400).json({ message: 'Email khong hop le' });
+        }
+
+        if (typeof password !== 'string' || password.length < 6 || password.length > 72) {
+            return res.status(400).json({ message: 'Mat khau phai tu 6 den 72 ky tu' });
+        }
+
+        if (normalizedPhone && normalizedPhone.length > 20) {
+            return res.status(400).json({ message: 'So dien thoai khong duoc vuot qua 20 ky tu' });
+        }
+
         const existingUser = await User.findOne({ where: { email: normalizedEmail } });
         if (existingUser) {
             return res.status(400).json({ message: 'Email da duoc su dung' });
@@ -51,15 +67,18 @@ router.post('/register', async (req, res) => {
         const passwordHash = await bcrypt.hash(password, salt);
 
         const user = await User.create({
-            fullName: fullName.trim(),
+            fullName: normalizedName,
             email: normalizedEmail,
             passwordHash,
-            phone
+            phone: normalizedPhone
         });
 
         res.json({ token: signToken(user.id), user: publicUser(user) });
     } catch (err) {
         console.error('Register error:', err.message);
+        if (err.name === 'SequelizeUniqueConstraintError') {
+            return res.status(400).json({ message: 'Email da duoc su dung' });
+        }
         res.status(500).json({ message: 'Loi Server' });
     }
 });
@@ -68,11 +87,13 @@ router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        if (!email || !password) {
+        const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+
+        if (!normalizedEmail || !password) {
             return res.status(400).json({ message: 'Vui long nhap email va mat khau' });
         }
 
-        const user = await User.findOne({ where: { email: email.trim().toLowerCase() } });
+        const user = await User.findOne({ where: { email: normalizedEmail } });
         if (!user) {
             return res.status(400).json({ message: 'Thong tin dang nhap khong hop le' });
         }

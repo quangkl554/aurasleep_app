@@ -85,6 +85,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     themeToggleBtn.checked = (savedTheme === 'light');
   }
 
+  const authTabs = document.querySelectorAll('#login-screen .auth-tab');
+  if (authTabs.length >= 2) {
+    authTabs[0].id = 'login-tab';
+    authTabs[1].id = 'register-tab';
+    authTabs[0].addEventListener('click', () => switchAuthMode('login'));
+    authTabs[1].addEventListener('click', () => switchAuthMode('register'));
+  }
+
   // Set initial screen based on URL hash or default to login
   let initialScreen = window.location.hash.replace('#', '') || 'login';
   
@@ -220,6 +228,67 @@ async function handleLoginFromForm(button) {
   button.textContent = originalText;
 }
 
+function switchAuthMode(mode) {
+  const loginForm = document.getElementById('login-form');
+  const registerForm = document.getElementById('register-form');
+  const loginTab = document.getElementById('login-tab');
+  const registerTab = document.getElementById('register-tab');
+  const isRegister = mode === 'register';
+
+  if (loginForm) loginForm.style.display = isRegister ? 'none' : 'block';
+  if (registerForm) registerForm.style.display = isRegister ? 'block' : 'none';
+  if (loginTab) loginTab.classList.toggle('active', !isRegister);
+  if (registerTab) registerTab.classList.toggle('active', isRegister);
+}
+
+async function handleRegister(fullName, email, password, phone) {
+  try {
+    const res = await apiFetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fullName, email, password, phone })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      localStorage.setItem(TOKEN_KEY, data.token);
+      updateUserUi(data.user);
+      navigateTo('dashboard');
+    } else {
+      const err = await res.json().catch(() => ({}));
+      alert('Dang ky that bai: ' + (err.message || 'Khong the tao tai khoan'));
+    }
+  } catch (e) {
+    alert('Loi ket noi toi Server!');
+    console.error(e);
+  }
+}
+
+async function handleRegisterFromForm(button) {
+  const form = document.getElementById('register-form');
+  const fullName = form?.querySelector('[name="fullName"]')?.value.trim();
+  const email = form?.querySelector('[name="email"]')?.value.trim();
+  const phone = form?.querySelector('[name="phone"]')?.value.trim();
+  const password = form?.querySelector('[name="password"]')?.value;
+
+  if (!fullName || !email || !password) {
+    alert('Vui long nhap ho ten, email va mat khau.');
+    return;
+  }
+
+  if (password.length < 6 || password.length > 72) {
+    alert('Mat khau phai tu 6 den 72 ky tu.');
+    return;
+  }
+
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Dang tao...';
+  await handleRegister(fullName, email, password, phone);
+  button.disabled = false;
+  button.textContent = originalText;
+}
+
 // Navigation Function
 function navigateTo(screenId, navElement = null) {
   const protectedScreens = ['dashboard', 'device', 'analytics', 'profile', 'chat', 'routine'];
@@ -284,16 +353,6 @@ function navigateTo(screenId, navElement = null) {
   // Update URL hash for simple state management
   window.location.hash = screenId;
 
-  if (screenId === 'dashboard') {
-    // Thực hiện đăng nhập giả lập qua API nếu đang ở màn hình login
-    const emailInput = document.querySelector('input[type="email"]');
-    const passInput = document.querySelector('input[type="password"]');
-    
-    if (document.getElementById('login-screen').classList.contains('active') && emailInput && emailInput.value) {
-      handleLogin(emailInput.value, passInput.value);
-      return; 
-    }
-  }
 }
 
 function updateBottomNavVisibility(screenId) {
