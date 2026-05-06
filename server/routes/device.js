@@ -2,22 +2,19 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const { Device } = require('../models');
+const { trackActivity, trackDeviceCommand } = require('../utils/tracking');
 
-// @route   GET /api/devices
-// @desc    Lấy danh sách thiết bị và trạng thái cài đặt của user
-// @access  Private
 router.get('/', auth, async (req, res) => {
     try {
         let devices = await Device.findAll({
             where: { userId: req.user.id }
         });
 
-        // Nếu user chưa có thiết bị nào, tạo một thiết bị ảo mặc định
         if (devices.length === 0) {
             const newDevice = await Device.create({
                 userId: req.user.id,
-                deviceName: 'AuraSleep Pro - ' + req.user.id,
-                serialNumber: 'AS-PRO-' + Math.floor(Math.random() * 1000000),
+                deviceName: `AuraSleep Pro - ${req.user.id}`,
+                serialNumber: `AS-PRO-${Math.floor(Math.random() * 1000000)}`,
                 isConnected: true,
                 lightIntensity: 60,
                 colorTemp: 3200,
@@ -25,18 +22,23 @@ router.get('/', auth, async (req, res) => {
                 soundVolume: 50
             });
             devices = [newDevice];
+
+            await trackActivity(req, {
+                userId: req.user.id,
+                eventType: 'device_created',
+                entityType: 'device',
+                entityId: newDevice.id,
+                metadata: { source: 'default_demo_device' }
+            });
         }
 
         res.json(devices);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Lỗi Server');
+        console.error('Device list error:', err.message);
+        res.status(500).json({ message: 'Loi Server' });
     }
 });
 
-// @route   PUT /api/devices/:id/settings
-// @desc    Cập nhật cài đặt thiết bị (ánh sáng, âm thanh)
-// @access  Private
 router.put('/:id/settings', auth, async (req, res) => {
     try {
         const { lightIntensity, colorTemp, activeSound, soundVolume } = req.body;
@@ -46,28 +48,39 @@ router.put('/:id/settings', auth, async (req, res) => {
         });
 
         if (!device) {
-            return res.status(404).json({ message: 'Không tìm thấy thiết bị' });
+            return res.status(404).json({ message: 'Khong tim thay thiet bi' });
         }
 
-        // Cập nhật các trường được gửi lên
         if (lightIntensity !== undefined) device.lightIntensity = lightIntensity;
         if (colorTemp !== undefined) device.colorTemp = colorTemp;
         if (activeSound !== undefined) device.activeSound = activeSound;
         if (soundVolume !== undefined) device.soundVolume = soundVolume;
-        
+
         device.lastSyncAt = new Date();
         await device.save();
 
+        const payload = { lightIntensity, colorTemp, activeSound, soundVolume };
+        await trackDeviceCommand(req, {
+            userId: req.user.id,
+            deviceId: device.id,
+            command: 'update_settings',
+            payload
+        });
+        await trackActivity(req, {
+            userId: req.user.id,
+            eventType: 'device_settings_updated',
+            entityType: 'device',
+            entityId: device.id,
+            metadata: payload
+        });
+
         res.json(device);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Lỗi Server');
+        console.error('Device settings error:', err.message);
+        res.status(500).json({ message: 'Loi Server' });
     }
 });
 
-// @route   POST /api/devices/:id/sleep-mode
-// @desc    Bật chế độ ngủ (Sleep Mode) - tắt dần ánh sáng
-// @access  Private
 router.post('/:id/sleep-mode', auth, async (req, res) => {
     try {
         const device = await Device.findOne({
@@ -75,22 +88,36 @@ router.post('/:id/sleep-mode', auth, async (req, res) => {
         });
 
         if (!device) {
-            return res.status(404).json({ message: 'Không tìm thấy thiết bị' });
+            return res.status(404).json({ message: 'Khong tim thay thiet bi' });
         }
 
-        // Trong thực tế, API này sẽ gửi tín hiệu MQTT/WebSocket tới phần cứng
-        // Ở đây ta chỉ mô phỏng việc server nhận được lệnh
-        res.json({ 
-            message: 'Đã kích hoạt Chế độ ngủ. Thiết bị sẽ giảm sáng trong 30 phút.',
-            deviceConfig: {
-                targetIntensity: 0,
-                duration: 30 * 60, // 30 phút
-                timestamp: new Date()
-            }
+        const deviceConfig = {
+            targetIntensity: 0,
+            duration: 30 * 60,
+            timestamp: new Date()
+        };
+
+        await trackDeviceCommand(req, {
+            userId: req.user.id,
+            deviceId: device.id,
+            command: 'sleep_mode',
+            payload: deviceConfig
+        });
+        await trackActivity(req, {
+            userId: req.user.id,
+            eventType: 'sleep_mode_started',
+            entityType: 'device',
+            entityId: device.id,
+            metadata: deviceConfig
+        });
+
+        res.json({
+            message: 'Da kich hoat che do ngu. Thiet bi se giam sang trong 30 phut.',
+            deviceConfig
         });
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Lỗi Server');
+        console.error('Sleep mode error:', err.message);
+        res.status(500).json({ message: 'Loi Server' });
     }
 });
 

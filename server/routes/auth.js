@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { User } = require('../models');
 const auth = require('../middleware/auth');
+const { trackActivity, trackSession } = require('../utils/tracking');
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const vietnamPhonePattern = /^(0|\+84)(\d{9}|\d{10})$/;
@@ -74,6 +75,15 @@ router.post('/register', async (req, res) => {
             phone: normalizedPhone
         });
 
+        await trackSession(req, { userId: user.id, authEvent: 'register' });
+        await trackActivity(req, {
+            userId: user.id,
+            eventType: 'user_registered',
+            entityType: 'user',
+            entityId: user.id,
+            metadata: { authProvider: 'local' }
+        });
+
         res.json({ token: signToken(user.id), user: publicUser(user) });
     } catch (err) {
         console.error('Register error:', err.message);
@@ -103,6 +113,15 @@ router.post('/login', async (req, res) => {
         if (!isMatch) {
             return res.status(400).json({ message: 'Thong tin dang nhap khong hop le' });
         }
+
+        await trackSession(req, { userId: user.id, authEvent: 'login' });
+        await trackActivity(req, {
+            userId: user.id,
+            eventType: 'user_logged_in',
+            entityType: 'user',
+            entityId: user.id,
+            metadata: { authProvider: 'local' }
+        });
 
         res.json({ token: signToken(user.id), user: publicUser(user) });
     } catch (err) {

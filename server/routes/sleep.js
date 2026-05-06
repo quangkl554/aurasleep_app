@@ -3,6 +3,7 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const { SleepRecord } = require('../models');
 const { Op } = require('sequelize');
+const { trackActivity } = require('../utils/tracking');
 
 // @route   GET /api/sleep
 // @desc    Lấy dữ liệu giấc ngủ theo khoảng thời gian
@@ -53,6 +54,14 @@ router.post('/', auth, async (req, res) => {
             sleepScore,
             efficiency,
             fallAsleepMin
+        });
+
+        await trackActivity(req, {
+            userId: req.user.id,
+            eventType: 'sleep_record_created',
+            entityType: 'sleep_record',
+            entityId: newRecord.id,
+            metadata: { date, totalSleepMin, sleepScore, efficiency, fallAsleepMin }
         });
 
         res.json(newRecord);

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const crypto = require('crypto');
+const { trackActivity, trackPaymentEvent } = require('../utils/tracking');
 
 const allowedPlans = {
     month: 99000,
@@ -23,7 +24,7 @@ function getRequiredPaymentConfig() {
     return config;
 }
 
-router.post('/create-url', auth, (req, res) => {
+router.post('/create-url', auth, async (req, res) => {
     try {
         const { amount, planType } = req.body;
         const expectedAmount = allowedPlans[planType];
@@ -65,6 +66,27 @@ router.post('/create-url', auth, (req, res) => {
 
         sortedParams.vnp_SecureHash = signed;
         const paymentUrl = `${config.url}?${new URLSearchParams(sortedParams).toString()}`;
+
+        await trackPaymentEvent(req, {
+            userId: req.user.id,
+            eventType: 'payment_url_created',
+            transactionRef: orderId,
+            planType,
+            amount: expectedAmount,
+            status: 'pending',
+            payload: {
+                provider: 'vnpay',
+                mode: 'sandbox',
+                returnUrl: config.returnUrl
+            }
+        });
+        await trackActivity(req, {
+            userId: req.user.id,
+            eventType: 'payment_started',
+            entityType: 'payment',
+            entityId: orderId,
+            metadata: { provider: 'vnpay', planType, amount: expectedAmount }
+        });
 
         res.json({ paymentUrl, orderId, mode: 'sandbox' });
     } catch (err) {

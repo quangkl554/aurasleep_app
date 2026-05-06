@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const { ChatSession, ChatMessage } = require('../models');
+const { trackActivity } = require('../utils/tracking');
 
 const GROQ_API_URL = process.env.GROQ_API_URL || 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
@@ -94,6 +95,18 @@ router.post('/send', auth, async (req, res) => {
             sessionId: currentSessionId,
             role: 'bot',
             content: botReply
+        });
+
+        await trackActivity(req, {
+            userId: req.user.id,
+            eventType: 'chat_message_sent',
+            entityType: 'chat_session',
+            entityId: currentSessionId,
+            metadata: {
+                model: GROQ_MODEL,
+                messageLength: message.trim().length,
+                replyLength: botReply.length
+            }
         });
 
         res.json({

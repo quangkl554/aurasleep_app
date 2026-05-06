@@ -11,6 +11,10 @@ const ChatSession = require('./ChatSession');
 const ChatMessage = require('./ChatMessage');
 const BlogCategory = require('./BlogCategory');
 const BlogPost = require('./BlogPost');
+const UserActivityEvent = require('./UserActivityEvent');
+const UserSession = require('./UserSession');
+const DeviceCommandHistory = require('./DeviceCommandHistory');
+const PaymentEvent = require('./PaymentEvent');
 
 // Define Associations
 
@@ -50,6 +54,26 @@ ChatMessage.belongsTo(ChatSession, { foreignKey: 'sessionId' });
 BlogCategory.hasMany(BlogPost, { foreignKey: 'categoryId' });
 BlogPost.belongsTo(BlogCategory, { foreignKey: 'categoryId' });
 
+// User -> Activity Events (1 to Many)
+User.hasMany(UserActivityEvent, { foreignKey: 'userId', onDelete: 'CASCADE' });
+UserActivityEvent.belongsTo(User, { foreignKey: 'userId' });
+
+// User -> Sessions (1 to Many)
+User.hasMany(UserSession, { foreignKey: 'userId', onDelete: 'CASCADE' });
+UserSession.belongsTo(User, { foreignKey: 'userId' });
+
+// User/Device -> Command History
+User.hasMany(DeviceCommandHistory, { foreignKey: 'userId', onDelete: 'CASCADE' });
+DeviceCommandHistory.belongsTo(User, { foreignKey: 'userId' });
+Device.hasMany(DeviceCommandHistory, { foreignKey: 'deviceId', onDelete: 'CASCADE' });
+DeviceCommandHistory.belongsTo(Device, { foreignKey: 'deviceId' });
+
+// User/Order -> Payment Events
+User.hasMany(PaymentEvent, { foreignKey: 'userId', onDelete: 'CASCADE' });
+PaymentEvent.belongsTo(User, { foreignKey: 'userId' });
+Order.hasMany(PaymentEvent, { foreignKey: 'orderId', onDelete: 'SET NULL' });
+PaymentEvent.belongsTo(Order, { foreignKey: 'orderId' });
+
 module.exports = {
     sequelize,
     User,
@@ -62,5 +86,9 @@ module.exports = {
     ChatSession,
     ChatMessage,
     BlogCategory,
-    BlogPost
+    BlogPost,
+    UserActivityEvent,
+    UserSession,
+    DeviceCommandHistory,
+    PaymentEvent
 };

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const { SleepRoutine, RoutineStep } = require('../models');
+const { trackActivity } = require('../utils/tracking');
 
 // @route   GET /api/routines
 // @desc    Lấy tất cả routines của user
@@ -49,6 +50,18 @@ router.post('/', auth, async (req, res) => {
 
         const newRoutine = await SleepRoutine.findByPk(routine.id, {
             include: [{ model: RoutineStep, as: 'steps' }]
+        });
+
+        await trackActivity(req, {
+            userId: req.user.id,
+            eventType: 'routine_created',
+            entityType: 'sleep_routine',
+            entityId: routine.id,
+            metadata: {
+                name,
+                scheduledTime,
+                stepsCount: Array.isArray(steps) ? steps.length : 0
+            }
         });
 
         res.json(newRoutine);
