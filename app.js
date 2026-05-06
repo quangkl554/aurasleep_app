@@ -38,6 +38,14 @@ function getToken() {
 function clearSession() {
   localStorage.removeItem(TOKEN_KEY);
   currentChatSessionId = null;
+  stopActiveSound();
+  setActiveSoundUi(null);
+  const activeRoutineButton = document.querySelector('.routine-active');
+  if (activeRoutineButton) {
+    activeRoutineButton.classList.remove('routine-active');
+    activeRoutineButton.innerHTML = '<i class="fa-solid fa-play" style="margin-right: 8px;"></i> Bắt đầu thư giãn';
+    activeRoutineButton.style.background = '';
+  }
   document.querySelectorAll('.header-greeting h2').forEach(el => {
     el.textContent = 'AURASLEEP';
   });
