@@ -6,6 +6,7 @@ const { User } = require('../models');
 const auth = require('../middleware/auth');
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const vietnamPhonePattern = /^(0|\+84)(\d{9}|\d{10})$/;
 
 function signToken(userId) {
     if (!process.env.JWT_SECRET) {
@@ -42,20 +43,20 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({ message: 'Vui long nhap day du ho ten, email va mat khau' });
         }
 
-        if (normalizedName.length > 100) {
-            return res.status(400).json({ message: 'Ho ten khong duoc vuot qua 100 ky tu' });
+        if (normalizedName.length > 50) {
+            return res.status(400).json({ message: 'Ho ten khong duoc vuot qua 50 ky tu' });
         }
 
         if (!emailPattern.test(normalizedEmail) || normalizedEmail.length > 255) {
             return res.status(400).json({ message: 'Email khong hop le' });
         }
 
-        if (typeof password !== 'string' || password.length < 6 || password.length > 72) {
-            return res.status(400).json({ message: 'Mat khau phai tu 6 den 72 ky tu' });
+        if (typeof password !== 'string' || password.length < 6 || password.length > 30) {
+            return res.status(400).json({ message: 'Mat khau phai tu 6 den 30 ky tu' });
         }
 
-        if (normalizedPhone && normalizedPhone.length > 20) {
-            return res.status(400).json({ message: 'So dien thoai khong duoc vuot qua 20 ky tu' });
+        if (normalizedPhone && !vietnamPhonePattern.test(normalizedPhone)) {
+            return res.status(400).json({ message: 'So dien thoai phai dung dinh dang Viet Nam 10-11 so' });
         }
 
         const existingUser = await User.findOne({ where: { email: normalizedEmail } });

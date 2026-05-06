@@ -276,8 +276,18 @@ async function handleRegisterFromForm(button) {
     return;
   }
 
-  if (password.length < 6 || password.length > 72) {
-    alert('Mat khau phai tu 6 den 72 ky tu.');
+  if (fullName.length > 50) {
+    alert('Ho ten khong duoc vuot qua 50 ky tu.');
+    return;
+  }
+
+  if (password.length < 6 || password.length > 30) {
+    alert('Mat khau phai tu 6 den 30 ky tu.');
+    return;
+  }
+
+  if (phone && !/^(0|\+84)(\d{9}|\d{10})$/.test(phone)) {
+    alert('So dien thoai phai dung dinh dang Viet Nam 10-11 so.');
     return;
   }
 
