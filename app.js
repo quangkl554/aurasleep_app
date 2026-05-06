@@ -1,5 +1,11 @@
 const API_BASE_URL = (window.AURASLEEP_CONFIG?.API_BASE_URL || 'http://localhost:5000').replace(/\/$/, '');
 const TOKEN_KEY = 'aurasleep_token';
+const SOUND_EXTENSIONS = ['mp3', 'mp4', 'm4a', 'wav', 'ogg'];
+const soundPlayer = new Audio();
+soundPlayer.loop = true;
+soundPlayer.preload = 'auto';
+let activeSoundKey = null;
+let soundErrorNotifiedKey = null;
 
 function apiUrl(path) {
   return `${API_BASE_URL}${path}`;
@@ -61,6 +67,49 @@ function appendMultilineText(element, text) {
     if (index > 0) element.appendChild(document.createElement('br'));
     element.appendChild(document.createTextNode(line));
   });
+}
+
+function formatSleepDuration(totalSleepMin = 0) {
+  const safeMinutes = Math.max(0, Number(totalSleepMin) || 0);
+  const h = Math.floor(safeMinutes / 60);
+  const m = safeMinutes % 60;
+  return `${h}h ${m}m`;
+}
+
+function getRhythmLabel(record) {
+  if (!record) return 'Chưa có dữ liệu';
+  if ((record.sleepScore || 0) >= 85 && (record.efficiency || 0) >= 85) return 'Ổn định';
+  if ((record.sleepScore || 0) >= 70) return 'Cần theo dõi';
+  return 'Cần cải thiện';
+}
+
+function getDashboardSuggestion(record) {
+  if (!record) {
+    return 'Chưa có dữ liệu giấc ngủ. Hãy ghi nhận giấc ngủ đầu tiên để AuraBot phân tích chính xác hơn.';
+  }
+
+  if ((record.totalSleepMin || 0) < 420) {
+    return 'Dữ liệu gần nhất cho thấy thời gian ngủ còn thấp. Tối nay bạn nên bắt đầu routine sớm hơn và ưu tiên âm thanh thư giãn nhẹ.';
+  }
+
+  if ((record.sleepScore || 0) < 70) {
+    return 'Điểm ngủ gần nhất chưa tốt. Hãy giữ giờ ngủ cố định, giảm ánh sáng mạnh trước khi ngủ và theo dõi lại vào ngày mai.';
+  }
+
+  return 'Giấc ngủ gần nhất đang ở mức tốt. Hãy duy trì giờ ngủ hiện tại và routine thư giãn trước khi ngủ.';
+}
+
+function isSleepAnalysisPrompt(text) {
+  const normalized = String(text || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  return normalized.includes('phan tich') && normalized.includes('giac ngu');
+}
+
+function removeTypingIndicator() {
+  const typing = document.getElementById('typing-indicator');
+  if (typing) typing.remove();
 }
 
 function hideSplash(delay = 0) {
@@ -326,8 +375,12 @@ function navigateTo(screenId, navElement = null) {
   updateBottomNavVisibility(screenId);
 
   // 4. Gọi API tùy theo màn hình
-  if (screenId === 'device') {
+  if (screenId === 'dashboard') {
+    loadDashboardData();
+  } else if (screenId === 'device') {
     fetchDeviceData();
+  } else if (screenId === 'analytics') {
+    loadSleepData('week');
   } else if (screenId === 'routine') {
     fetchRoutines();
   }
@@ -415,15 +468,7 @@ async function fetchDeviceData() {
           tempSlider.dispatchEvent(new Event('input'));
         }
         
-        // Update Sound
-        const soundItems = document.querySelectorAll('.sound-item');
-        soundItems.forEach(item => {
-          item.classList.remove('active');
-          if (item.getAttribute('data-freq') && item.getAttribute('data-freq').includes(dev.activeSound)) {
-            item.classList.add('active');
-            item.click(); // Trigger visualizer update
-          }
-        });
+        setActiveSoundUi(dev.activeSound, false);
       }
     }
   } catch (e) {
@@ -490,6 +535,59 @@ const visualizer = document.getElementById('audio-visualizer');
 const soundNameSpan = document.getElementById('playing-sound-name');
 const soundFreqSpan = document.getElementById('playing-sound-freq');
 
+function getSoundCandidates(soundKey) {
+  return SOUND_EXTENSIONS.map(ext => `assets/sounds/${soundKey}.${ext}`);
+}
+
+function setActiveSoundUi(soundKey, shouldShowVisualizer = true) {
+  soundItems.forEach(item => {
+    const isMatch = item.dataset.sound === soundKey;
+    item.classList.toggle('active', Boolean(isMatch));
+    if (isMatch && visualizer && shouldShowVisualizer) {
+      visualizer.style.display = 'flex';
+      soundNameSpan.textContent = item.querySelector('span')?.textContent || soundKey;
+      soundFreqSpan.textContent = item.getAttribute('data-freq') || 'Audio thư giãn';
+    }
+  });
+
+  if (!soundKey && visualizer) {
+    visualizer.style.display = 'none';
+  }
+}
+
+function stopActiveSound() {
+  soundPlayer.pause();
+  soundPlayer.removeAttribute('src');
+  soundPlayer.load();
+  activeSoundKey = null;
+}
+
+function playSoundCandidate(soundKey, candidates, index = 0) {
+  if (index >= candidates.length) {
+    stopActiveSound();
+    if (soundErrorNotifiedKey !== soundKey) {
+      soundErrorNotifiedKey = soundKey;
+      alert(`Chưa tìm thấy file âm thanh cho "${soundKey}". Hãy thêm file vào assets/sounds/${soundKey}.mp3 hoặc .mp4.`);
+    }
+    return;
+  }
+
+  soundPlayer.onerror = () => playSoundCandidate(soundKey, candidates, index + 1);
+  soundPlayer.src = candidates[index];
+  soundPlayer.play().then(() => {
+    activeSoundKey = soundKey;
+    soundErrorNotifiedKey = null;
+  }).catch(() => playSoundCandidate(soundKey, candidates, index + 1));
+}
+
+function playSound(soundKey) {
+  if (!soundKey) {
+    stopActiveSound();
+    return;
+  }
+  playSoundCandidate(soundKey, getSoundCandidates(soundKey));
+}
+
 soundItems.forEach(item => {
   item.addEventListener('click', () => {
     const isActive = item.classList.contains('active');
@@ -497,18 +595,20 @@ soundItems.forEach(item => {
     if (!isActive) {
       soundItems.forEach(i => i.classList.remove('active'));
       item.classList.add('active');
+      const soundKey = item.dataset.sound;
       
       if (visualizer) {
         visualizer.style.display = 'flex';
         soundNameSpan.textContent = item.querySelector('span').textContent;
-        soundFreqSpan.textContent = item.getAttribute('data-freq') || 'Băng thông rộng (20Hz - 20kHz)';
-        
-        // Save to DB
-        debounceUpdateSettings({ activeSound: soundNameSpan.textContent });
+        soundFreqSpan.textContent = item.getAttribute('data-freq') || 'Audio thư giãn';
       }
+
+      playSound(soundKey);
+      debounceUpdateSettings({ activeSound: soundKey });
     } else {
       item.classList.remove('active');
       if (visualizer) visualizer.style.display = 'none';
+      stopActiveSound();
       debounceUpdateSettings({ activeSound: null });
     }
   });
@@ -678,6 +778,54 @@ if (analyticsTabs) {
 }
 
 // Gọi API lấy dữ liệu giấc ngủ thật
+async function loadDashboardData() {
+  const token = localStorage.getItem('aurasleep_token');
+  if (!token) return;
+
+  const scoreValue = document.querySelector('#dashboard-screen .score-value');
+  const statVals = document.querySelectorAll('#dashboard-screen .stat-val');
+  const aiSuggestion = document.querySelector('#dashboard-screen .ai-card p');
+
+  try {
+    const res = await apiFetch('/api/sleep?range=week', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to fetch dashboard sleep data');
+
+    const data = await res.json();
+    const records = Array.isArray(data) ? data : [];
+    const lastRecord = records[records.length - 1];
+
+    if (!lastRecord) {
+      if (scoreValue) scoreValue.textContent = '--';
+      if (statVals.length >= 3) {
+        statVals[0].textContent = '0h 0m';
+        statVals[1].textContent = '--';
+        statVals[2].textContent = 'Chưa có dữ liệu';
+      }
+      if (aiSuggestion) aiSuggestion.textContent = getDashboardSuggestion(null);
+      return;
+    }
+
+    if (scoreValue) scoreValue.textContent = lastRecord.sleepScore ?? '--';
+    if (statVals.length >= 3) {
+      statVals[0].textContent = formatSleepDuration(lastRecord.totalSleepMin);
+      statVals[1].textContent = lastRecord.efficiency ? `${lastRecord.efficiency}%` : '--';
+      statVals[2].textContent = getRhythmLabel(lastRecord);
+    }
+    if (aiSuggestion) aiSuggestion.textContent = getDashboardSuggestion(lastRecord);
+  } catch (err) {
+    console.error('Lỗi khi tải dashboard sleep data', err);
+    if (scoreValue) scoreValue.textContent = '--';
+    if (statVals.length >= 3) {
+      statVals[0].textContent = '0h 0m';
+      statVals[1].textContent = '--';
+      statVals[2].textContent = 'Không tải được';
+    }
+    if (aiSuggestion) aiSuggestion.textContent = 'Chưa tải được dữ liệu giấc ngủ. Hãy kiểm tra kết nối rồi thử lại.';
+  }
+}
+
 async function loadSleepData(range) {
   const token = localStorage.getItem('aurasleep_token');
   if (!token) return;
@@ -747,9 +895,7 @@ async function loadSleepData(range) {
       const lastRecord = last7[activeIndex];
       const statVals = document.querySelectorAll('#analytics-screen .stat-val');
       if (statVals.length >= 4) {
-        const h = Math.floor(lastRecord.totalSleepMin / 60);
-        const m = lastRecord.totalSleepMin % 60;
-        statVals[0].textContent = `${h}h ${m}m`;
+        statVals[0].textContent = formatSleepDuration(lastRecord.totalSleepMin);
         
         // Tính % thay đổi so với ngày trước đó
         let change = 0;
@@ -762,6 +908,15 @@ async function loadSleepData(range) {
         
         statVals[2].textContent = lastRecord.fallAsleepMin + ' phút';
         statVals[3].textContent = lastRecord.sleepScore + '/100';
+      }
+    } else {
+      const statVals = document.querySelectorAll('#analytics-screen .stat-val');
+      if (statVals.length >= 4) {
+        statVals[0].textContent = '0h 0m';
+        statVals[1].textContent = '--';
+        statVals[1].style.color = 'var(--text-secondary)';
+        statVals[2].textContent = '--';
+        statVals[3].textContent = '--';
       }
     }
   } catch (err) {
@@ -812,6 +967,32 @@ function editTime(btn) {
 // Chatbot Functionality (Calling Real Groq API)
 let currentChatSessionId = null;
 
+async function buildLocalSleepAnalysisMessage() {
+  const res = await apiFetch('/api/sleep?range=week');
+  if (!res.ok) {
+    return 'Mình chưa tải được dữ liệu giấc ngủ từ server. Bạn thử lại sau ít phút nhé.';
+  }
+
+  const records = await res.json();
+  if (!Array.isArray(records) || records.length === 0) {
+    return 'Bạn chưa có dữ liệu giấc ngủ để phân tích. Sau khi có bản ghi đầu tiên, AuraBot sẽ dựa trên thời lượng ngủ, hiệu suất, thời gian chìm giấc và điểm ngủ để đưa ra gợi ý cá nhân.';
+  }
+
+  const last7 = records.slice(-7);
+  const latest = last7[last7.length - 1];
+  const avgMinutes = Math.round(last7.reduce((sum, item) => sum + (item.totalSleepMin || 0), 0) / last7.length);
+  const avgScore = Math.round(last7.reduce((sum, item) => sum + (item.sleepScore || 0), 0) / last7.length);
+  const avgEfficiency = Math.round(last7.reduce((sum, item) => sum + (item.efficiency || 0), 0) / last7.length);
+
+  return [
+    'Phân tích giấc ngủ từ dữ liệu thật của bạn:',
+    `- Gần nhất: ${formatSleepDuration(latest.totalSleepMin)}, điểm ${latest.sleepScore || '--'}/100, hiệu suất ${latest.efficiency || '--'}%.`,
+    `- Trung bình ${last7.length} bản ghi gần nhất: ${formatSleepDuration(avgMinutes)}, điểm ${avgScore}/100, hiệu suất ${avgEfficiency}%.`,
+    `- Đánh giá: ${getRhythmLabel(latest)}.`,
+    getDashboardSuggestion(latest)
+  ].join('\n');
+}
+
 async function sendChatMessage() {
   const inputField = document.getElementById('chat-input-field');
   const messageText = inputField.value.trim();
@@ -841,6 +1022,17 @@ async function sendChatMessage() {
   // Call API
   const token = localStorage.getItem('aurasleep_token');
   try {
+    if (isSleepAnalysisPrompt(messageText)) {
+      const reply = await buildLocalSleepAnalysisMessage();
+      removeTypingIndicator();
+      const botMsg = document.createElement('div');
+      botMsg.className = 'message bot';
+      appendMultilineText(botMsg, reply);
+      chatMessages.appendChild(botMsg);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      return;
+    }
+
     const res = await apiFetch('/api/chat/send', {
       method: 'POST',
       headers: { 
@@ -854,7 +1046,7 @@ async function sendChatMessage() {
     });
 
     // Remove typing indicator
-    document.getElementById('typing-indicator').remove();
+    removeTypingIndicator();
 
     if (res.ok) {
       const data = await res.json();
@@ -868,11 +1060,13 @@ async function sendChatMessage() {
       const errData = await res.json();
       const botMsg = document.createElement('div');
       botMsg.className = 'message bot';
-      botMsg.textContent = 'Lỗi từ Server: ' + (errData.message || 'Hệ thống đang bận');
+      botMsg.textContent = errData.message?.includes('Groq')
+        ? 'AuraBot AI chưa được cấu hình Groq trên server. Riêng phần phân tích giấc ngủ vẫn có thể dùng dữ liệu thật của bạn.'
+        : 'Lỗi từ Server: ' + (errData.message || 'Hệ thống đang bận');
       chatMessages.appendChild(botMsg);
     }
   } catch (err) {
-    document.getElementById('typing-indicator').remove();
+    removeTypingIndicator();
     const botMsg = document.createElement('div');
     botMsg.className = 'message bot';
     botMsg.textContent = 'Mất kết nối tới server AI.';
