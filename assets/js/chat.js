@@ -10,6 +10,43 @@ export function appendMultilineText(element, text) {
   });
 }
 
+function buildClientChatFallback(messageText) {
+  const normalized = String(messageText || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  if (normalized.includes('goi y am thanh') || normalized.includes('am thanh') || normalized.includes('nhac')) {
+    return [
+      'AuraBot đang dùng chế độ dự phòng vì AI cloud chưa phản hồi ổn định.',
+      '',
+      'Gợi ý âm thanh cho tối nay:',
+      '- Mưa rào: che tiếng ồn tốt, dễ thư giãn.',
+      '- Sóng biển: nhịp đều, phù hợp trước khi ngủ.',
+      '- Brown Noise hoặc Pink Noise: âm nền ổn định.',
+      '- Thiền sâu hoặc Piano: phù hợp khi muốn thả lỏng nhẹ nhàng.'
+    ].join('\n');
+  }
+
+  if (normalized.includes('kho ngu') || normalized.includes('mat ngu')) {
+    return [
+      'AuraBot đang dùng chế độ dự phòng vì AI cloud chưa phản hồi ổn định.',
+      '',
+      'Bạn có thể thử routine 20-30 phút:',
+      '- Giảm ánh sáng mạnh và tắt bớt thông báo.',
+      '- Chọn âm thanh nhẹ như Mưa rào hoặc Thiền sâu.',
+      '- Hít vào 4 giây, giữ 2 giây, thở ra 6 giây.',
+      '- Nếu vẫn tỉnh sau 20 phút, rời giường một lúc rồi quay lại khi buồn ngủ.'
+    ].join('\n');
+  }
+
+  return [
+    'AuraBot đang dùng chế độ dự phòng vì AI cloud chưa phản hồi ổn định.',
+    '',
+    'Bạn vẫn có thể ghi nhận giấc ngủ, xem dashboard, chọn âm thanh và bật routine thư giãn. Mình sẽ hỗ trợ bằng các gợi ý cơ bản trong lúc AI cloud được khôi phục.'
+  ].join('\n');
+}
+
 export async function sendChatMessage() {
   const inputField = document.getElementById('chat-input-field');
   const messageText = inputField.value.trim();
@@ -54,13 +91,17 @@ export async function sendChatMessage() {
       chatMessages.appendChild(botMsg);
     } else {
       const errorMsg = document.createElement('div');
-      errorMsg.className = 'message bot error';
-      errorMsg.textContent = 'Xin lỗi, AuraBot đang bận một chút. Bạn thử lại sau nhé!';
+      errorMsg.className = 'message bot';
+      appendMultilineText(errorMsg, buildClientChatFallback(messageText));
       chatMessages.appendChild(errorMsg);
     }
   } catch (err) { 
     console.error('Lỗi Chat:', err);
     if (loadingMsg.parentNode) chatMessages.removeChild(loadingMsg);
+    const errorMsg = document.createElement('div');
+    errorMsg.className = 'message bot';
+    appendMultilineText(errorMsg, buildClientChatFallback(messageText));
+    chatMessages.appendChild(errorMsg);
   }
   
   chatMessages.scrollTop = chatMessages.scrollHeight;

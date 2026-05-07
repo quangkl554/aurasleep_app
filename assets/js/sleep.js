@@ -164,11 +164,20 @@ export async function loadSleepData(range = 'week') {
     
     const bars = document.querySelectorAll('.chart-bar');
     const vals = document.querySelectorAll('.chart-value');
-    const days = document.querySelectorAll('.chart-day');
+    const containers = document.querySelectorAll('.chart-bar-container');
 
     // Reset toàn bộ biểu đồ về trạng thái trống trước khi nạp dữ liệu thật
-    bars.forEach(bar => bar.style.height = '0%');
-    vals.forEach(val => val.textContent = '');
+    bars.forEach(bar => {
+      bar.style.height = '10%';
+      bar.style.background = 'var(--border)';
+      bar.style.boxShadow = 'none';
+    });
+    vals.forEach(val => {
+      val.textContent = '';
+      val.style.color = 'var(--text-secondary)';
+      val.style.fontWeight = '600';
+    });
+    containers.forEach(container => container.classList.remove('active'));
 
     if (!data || data.length === 0) return;
 
@@ -185,12 +194,16 @@ export async function loadSleepData(range = 'week') {
         if (vals[index]) vals[index].textContent = hours.toFixed(1) + 'h';
         
         // Cập nhật nhãn ngày nếu có
-        if (days[index] && record.date) {
+        const dayLabel = containers[index]?.querySelector('span:last-child');
+        if (dayLabel && record.date) {
           const d = new Date(record.date);
-          days[index].textContent = d.getDate() + '/' + (d.getMonth() + 1);
+          dayLabel.textContent = d.getDate() + '/' + (d.getMonth() + 1);
         }
       }
     });
+
+    const activeIndex = displayData.length - 1;
+    if (containers[activeIndex]) selectBar(containers[activeIndex]);
   } catch (err) { 
     console.error('Lỗi tải dữ liệu giấc ngủ:', err);
   }
@@ -200,8 +213,30 @@ window.loadSleepData = loadSleepData;
 
 export function selectBar(element) {
   const containers = document.querySelectorAll('.chart-bar-container');
-  containers.forEach(c => c.classList.remove('active'));
+  containers.forEach(c => {
+    c.classList.remove('active');
+    const bar = c.querySelector('.chart-bar');
+    const value = c.querySelector('.chart-value');
+    if (bar) {
+      bar.style.background = 'var(--border)';
+      bar.style.boxShadow = 'none';
+    }
+    if (value) {
+      value.style.color = 'var(--text-secondary)';
+      value.style.fontWeight = '600';
+    }
+  });
   element.classList.add('active');
+  const activeBar = element.querySelector('.chart-bar');
+  const activeValue = element.querySelector('.chart-value');
+  if (activeBar) {
+    activeBar.style.background = 'var(--accent-primary)';
+    activeBar.style.boxShadow = '0 0 14px rgba(244,162,97,0.55)';
+  }
+  if (activeValue) {
+    activeValue.style.color = 'var(--accent-primary)';
+    activeValue.style.fontWeight = '800';
+  }
 }
 
 window.selectBar = selectBar;
