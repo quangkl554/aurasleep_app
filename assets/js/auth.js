@@ -1,5 +1,6 @@
 import { apiFetch, clearSession } from './api.js';
 import { navigateTo, showAppConfirm } from './ui.js';
+import { stopActiveSound } from './device.js';
 
 export function updateUserUi(user) {
   const displayName = user.fullName || 'AURASLEEP';
@@ -144,6 +145,7 @@ window.handleRegisterFromForm = handleRegisterFromForm;
 export async function confirmLogout() {
   const res = await showAppConfirm('Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng không?', 'Xác nhận đăng xuất');
   if (res) {
+    stopActiveSound();
     clearSession();
     navigateTo('login');
   }

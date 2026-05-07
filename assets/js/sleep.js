@@ -153,10 +153,9 @@ window.loadDashboardData = loadDashboardData;
 
 export async function loadSleepData(range = 'week') {
   // Cập nhật UI cho các Tab
-  const tabs = document.querySelectorAll('.analytics-tabs .tab-item');
+  const tabs = document.querySelectorAll('#analytics-tabs .auth-tab');
   tabs.forEach(tab => {
-    const onclickAttr = tab.getAttribute('onclick') || '';
-    tab.classList.toggle('active', onclickAttr.includes(`'${range}'`));
+    tab.classList.toggle('active', tab.dataset.tab === range);
   });
 
   try {
