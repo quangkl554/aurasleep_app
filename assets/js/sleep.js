@@ -151,23 +151,50 @@ export async function loadDashboardData() {
 
 window.loadDashboardData = loadDashboardData;
 
-export async function loadSleepData(range) {
+export async function loadSleepData(range = 'week') {
+  // Cập nhật UI cho các Tab
+  const tabs = document.querySelectorAll('.analytics-tabs .tab-item');
+  tabs.forEach(tab => {
+    const onclickAttr = tab.getAttribute('onclick') || '';
+    tab.classList.toggle('active', onclickAttr.includes(`'${range}'`));
+  });
+
   try {
     const res = await apiFetch('/api/sleep?range=' + range);
     const data = await res.json();
+    
     const bars = document.querySelectorAll('.chart-bar');
     const vals = document.querySelectorAll('.chart-value');
-    const last7 = data.slice(-7);
+    const days = document.querySelectorAll('.chart-day');
+
+    // Reset toàn bộ biểu đồ về trạng thái trống trước khi nạp dữ liệu thật
+    bars.forEach(bar => bar.style.height = '0%');
+    vals.forEach(val => val.textContent = '');
+
+    if (!data || data.length === 0) return;
+
+    // Lấy tối đa 7 bản ghi gần nhất để hiển thị lên biểu đồ 7 cột
+    const displayData = data.slice(-7);
     
-    bars.forEach((bar, index) => {
-      const record = last7[index];
-      if (record) {
-        const heightPercent = Math.max(30, Math.min(100, (record.totalSleepMin / 60) / 9 * 100));
-        bar.style.height = heightPercent + '%';
-        if (vals[index]) vals[index].textContent = (record.totalSleepMin / 60).toFixed(1) + 'h';
+    displayData.forEach((record, index) => {
+      if (bars[index]) {
+        const hours = (record.totalSleepMin / 60);
+        // Giả sử 9 tiếng là 100% chiều cao biểu đồ
+        const heightPercent = Math.max(10, Math.min(100, (hours / 9) * 100));
+        bars[index].style.height = heightPercent + '%';
+        
+        if (vals[index]) vals[index].textContent = hours.toFixed(1) + 'h';
+        
+        // Cập nhật nhãn ngày nếu có
+        if (days[index] && record.date) {
+          const d = new Date(record.date);
+          days[index].textContent = d.getDate() + '/' + (d.getMonth() + 1);
+        }
       }
     });
-  } catch (err) { console.error(err); }
+  } catch (err) { 
+    console.error('Lỗi tải dữ liệu giấc ngủ:', err);
+  }
 }
 
 window.loadSleepData = loadSleepData;

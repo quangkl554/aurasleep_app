@@ -16,12 +16,21 @@ export async function sendChatMessage() {
   if (!messageText) return;
 
   const chatMessages = document.getElementById('chat-messages');
+  
+  // Hiển thị tin nhắn của User
   const userMsg = document.createElement('div');
   userMsg.className = 'message user';
   userMsg.textContent = messageText;
   chatMessages.appendChild(userMsg);
   
   inputField.value = '';
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+
+  // Hiển thị trạng thái đang chờ của Bot
+  const loadingMsg = document.createElement('div');
+  loadingMsg.className = 'message bot loading';
+  loadingMsg.textContent = 'AuraBot đang suy nghĩ...';
+  chatMessages.appendChild(loadingMsg);
   chatMessages.scrollTop = chatMessages.scrollHeight;
 
   try {
@@ -31,6 +40,11 @@ export async function sendChatMessage() {
       body: JSON.stringify({ sessionId: currentChatSessionId, message: messageText })
     });
 
+    // Xóa dòng loading
+    if (loadingMsg.parentNode) {
+      chatMessages.removeChild(loadingMsg);
+    }
+
     if (res.ok) {
       const data = await res.json();
       currentChatSessionId = data.sessionId;
@@ -38,8 +52,16 @@ export async function sendChatMessage() {
       botMsg.className = 'message bot';
       appendMultilineText(botMsg, data.reply);
       chatMessages.appendChild(botMsg);
+    } else {
+      const errorMsg = document.createElement('div');
+      errorMsg.className = 'message bot error';
+      errorMsg.textContent = 'Xin lỗi, AuraBot đang bận một chút. Bạn thử lại sau nhé!';
+      chatMessages.appendChild(errorMsg);
     }
-  } catch (err) { console.error(err); }
+  } catch (err) { 
+    console.error('Lỗi Chat:', err);
+    if (loadingMsg.parentNode) chatMessages.removeChild(loadingMsg);
+  }
   
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
