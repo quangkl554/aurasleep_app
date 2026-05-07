@@ -1,4 +1,5 @@
 import { getToken } from './api.js';
+import { isAudioSessionActive, stopActiveSound } from './device.js';
 
 let appAlertCloseHandler = null;
 let appPromptResolver = null;
@@ -164,6 +165,15 @@ export function navigateTo(screenId, navElement = null) {
   if (targetScreen) {
     targetScreen.classList.add('active');
     targetScreen.scrollTop = 0;
+  }
+
+  // Tự động ngắt nhạc nếu chỉ là nghe thử và chuyển màn hình
+  if (!isAudioSessionActive) {
+    stopActiveSound();
+    // Tắt hiệu ứng Visualizer trên màn hình Thiết bị
+    const visualizer = document.getElementById('audio-visualizer');
+    if (visualizer) visualizer.style.display = 'none';
+    document.querySelectorAll('.sound-item').forEach(i => i.classList.remove('active'));
   }
 
   updateBottomNavVisibility(screenId);

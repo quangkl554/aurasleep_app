@@ -32,6 +32,7 @@ export const soundPlayer = new Audio();
 soundPlayer.loop = true;
 let activeSoundKey = null;
 let soundStopTimerId = null;
+export let isAudioSessionActive = false; // Flag: true nếu được bật qua Mode hoặc Routine
 
 export function stopActiveSound() {
   soundPlayer.pause();
@@ -81,10 +82,12 @@ export async function toggleSleepMode(btn) {
     btn.classList.add('active-sleep');
     btn.innerHTML = '<i class="fa-solid fa-moon"></i> Đang bật...';
     playSound('white', 30);
+    isAudioSessionActive = true; 
   } else {
     btn.classList.remove('active-sleep');
     btn.innerHTML = '<i class="fa-solid fa-power-off"></i> Kích hoạt';
     stopActiveSound();
+    isAudioSessionActive = false;
   }
 }
 
@@ -105,8 +108,10 @@ export async function activateRoutine(btn) {
     stopActiveSound();
     btn.classList.remove('routine-active');
     btn.innerHTML = '<i class="fa-solid fa-play"></i> Bắt đầu';
+    isAudioSessionActive = false;
   } else {
     playSound('rain', 45);
+    isAudioSessionActive = true;
     btn.classList.add('routine-active');
     btn.innerHTML = '<i class="fa-solid fa-stop"></i> Dừng';
   }
@@ -153,6 +158,7 @@ export function initSoundGrid() {
         }
 
         playSound(soundKey);
+        isAudioSessionActive = false; // Nghe thử từ grid thì không phải session
         debounceUpdateSettings({ activeSound: soundKey });
       } else {
         item.classList.remove('active');
