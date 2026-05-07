@@ -1,6 +1,26 @@
 import { apiFetch } from './api.js';
 import { showAppPrompt } from './ui.js';
 
+let updateSettingsTimeout;
+function debounceUpdateSettings(data) {
+  clearTimeout(updateSettingsTimeout);
+  updateSettingsTimeout = setTimeout(async () => {
+    const token = localStorage.getItem('aurasleep_token');
+    try {
+      // Lấy deviceId từ API nếu chưa có
+      const resDev = await apiFetch('/api/devices');
+      const devices = await resDev.json();
+      if (devices.length > 0) {
+        await apiFetch(`/api/devices/${devices[0].id}/settings`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+      }
+    } catch (e) { console.error('Lưu cài đặt lỗi:', e); }
+  }, 500);
+}
+
 export const SOUND_FILE_MAP = {
   rain: 'rain.mp3', ocean: 'ocean wave.mp3', brown: 'brown noise.mp3',
   fire: 'fire.mp3', pink: 'pink noise.mp3', piano: 'piano.mp3',
@@ -110,3 +130,36 @@ export async function editTime(btn) {
 }
 
 window.editTime = editTime;
+
+export function initSoundGrid() {
+  const soundItems = document.querySelectorAll('.sound-item');
+  const visualizer = document.getElementById('audio-visualizer');
+  const soundNameSpan = document.getElementById('playing-sound-name');
+  const soundFreqSpan = document.getElementById('playing-sound-freq');
+
+  soundItems.forEach(item => {
+    item.addEventListener('click', () => {
+      const isActive = item.classList.contains('active');
+      const soundKey = item.dataset.sound;
+
+      if (!isActive) {
+        soundItems.forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+
+        if (visualizer) {
+          visualizer.style.display = 'flex';
+          soundNameSpan.textContent = item.querySelector('span').textContent;
+          soundFreqSpan.textContent = item.getAttribute('data-freq') || 'Audio thư giãn';
+        }
+
+        playSound(soundKey);
+        debounceUpdateSettings({ activeSound: soundKey });
+      } else {
+        item.classList.remove('active');
+        if (visualizer) visualizer.style.display = 'none';
+        stopActiveSound();
+        debounceUpdateSettings({ activeSound: null });
+      }
+    });
+  });
+}

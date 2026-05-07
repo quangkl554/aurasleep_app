@@ -2,7 +2,7 @@ import { getToken } from './api.js';
 import { navigateTo, hideSplash, toggleTheme } from './ui.js';
 import { fetchUserInfo } from './auth.js';
 import { loadDashboardData, loadSleepData } from './sleep.js';
-import { fetchDeviceData, fetchRoutines } from './device.js';
+import { fetchDeviceData, fetchRoutines, initSoundGrid } from './device.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Load theme
@@ -29,6 +29,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Event Listeners for Sliders or other global UI elements not handled in modules
+  initSoundGrid();
+
   const intensitySlider = document.getElementById('intensity-slider');
   if (intensitySlider) {
     intensitySlider.addEventListener('input', (e) => {

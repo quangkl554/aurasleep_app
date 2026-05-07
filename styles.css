@@ -725,8 +725,25 @@ p { font-size: 14px; line-height: 1.5; color: var(--text-secondary); }
 .sleep-entry-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 16px;
   margin-top: 18px;
+}
+
+.sleep-entry-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sleep-entry-grid label span {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.sleep-entry-dialog {
+  max-width: 360px;
+  width: 90%;
 }
 
 .sleep-entry-grid label,
