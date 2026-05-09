@@ -5,23 +5,7 @@ import { ensureWelcomeNotification, rememberNotificationUser } from './notificat
 
 const REMEMBER_LOGIN_KEY = 'aurasleep_remember_login';
 
-function encodeRememberedPassword(password) {
-  try {
-    return btoa(unescape(encodeURIComponent(password || '')));
-  } catch {
-    return '';
-  }
-}
-
-function decodeRememberedPassword(value) {
-  try {
-    return decodeURIComponent(escape(atob(value || '')));
-  } catch {
-    return '';
-  }
-}
-
-function saveRememberedLogin(identifier, password, shouldRemember) {
+function saveRememberedLogin(identifier, shouldRemember) {
   if (!shouldRemember) {
     localStorage.removeItem(REMEMBER_LOGIN_KEY);
     return;
@@ -29,7 +13,6 @@ function saveRememberedLogin(identifier, password, shouldRemember) {
 
   localStorage.setItem(REMEMBER_LOGIN_KEY, JSON.stringify({
     identifier,
-    password: encodeRememberedPassword(password),
     savedAt: new Date().toISOString()
   }));
 }
@@ -43,9 +26,7 @@ export function initRememberedLogin() {
     const saved = JSON.parse(localStorage.getItem(REMEMBER_LOGIN_KEY) || 'null');
     if (!saved) return;
     const identifierInput = form.querySelector('[name="identifier"]');
-    const passwordInput = form.querySelector('[name="password"]');
     if (identifierInput) identifierInput.value = saved.identifier || '';
-    if (passwordInput) passwordInput.value = decodeRememberedPassword(saved.password);
     checkbox.checked = true;
   } catch {
     localStorage.removeItem(REMEMBER_LOGIN_KEY);
@@ -100,7 +81,7 @@ export async function handleLogin(identifier, password, rememberLogin = false) {
       localStorage.setItem('aurasleep_token', data.token);
       updateUserUi(data.user);
       ensureWelcomeNotification(data.user);
-      saveRememberedLogin(identifier, password, rememberLogin);
+      saveRememberedLogin(identifier, rememberLogin);
       navigateTo('dashboard');
     } else {
       const err = await res.json().catch(() => ({}));

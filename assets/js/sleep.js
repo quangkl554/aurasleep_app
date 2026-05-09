@@ -166,6 +166,63 @@ function getLatencyMeta(minutes) {
   return 'Cao, cần xem lại routine tối';
 }
 
+function getBedtimeMinute(record) {
+  const date = toDate(record.bedtime);
+  if (!date) return null;
+  const minutes = date.getHours() * 60 + date.getMinutes();
+  return minutes < 720 ? minutes + 1440 : minutes;
+}
+
+function standardDeviation(values) {
+  if (values.length <= 1) return 0;
+  const avg = values.reduce((sum, value) => sum + value, 0) / values.length;
+  const variance = values.reduce((sum, value) => sum + Math.pow(value - avg, 2), 0) / values.length;
+  return Math.sqrt(variance);
+}
+
+function getGoalStreak(records) {
+  let streak = 0;
+  for (let index = records.length - 1; index >= 0; index -= 1) {
+    const record = records[index];
+    if ((Number(record.totalSleepMin) || 0) >= GOOD_SLEEP_MIN) {
+      streak += 1;
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+function updateInsightPanel(records) {
+  const totalSleep = records.reduce((sum, record) => sum + (Number(record.totalSleepMin) || 0), 0);
+  const sleepDebt = Math.max(0, TARGET_SLEEP_MIN * records.length - totalSleep);
+  const surplus = Math.max(0, totalSleep - TARGET_SLEEP_MIN * records.length);
+  const bedtimeValues = records.map(getBedtimeMinute).filter(value => Number.isFinite(value));
+  const bedtimeStd = Math.round(standardDeviation(bedtimeValues));
+  const consistencyScore = Math.max(0, Math.min(100, Math.round(100 - (bedtimeStd / 90) * 100)));
+  const streak = getGoalStreak(records);
+
+  setText('#insight-sleep-debt', sleepDebt > 0 ? formatSleepDuration(sleepDebt) : `+${formatSleepDuration(surplus)}`);
+  setText(
+    '#insight-sleep-debt-copy',
+    sleepDebt > 0
+      ? `Cần bù dần, không nên ngủ bù quá mạnh một đêm.`
+      : 'Đang đạt hoặc vượt mục tiêu ngủ trong kỳ.'
+  );
+  setText('#insight-consistency', `${consistencyScore}/100`);
+  setText(
+    '#insight-consistency-copy',
+    bedtimeStd <= 30
+      ? 'Giờ đi ngủ khá đều, tốt cho nhịp sinh học.'
+      : `Giờ đi ngủ lệch khoảng ${bedtimeStd} phút, nên cố định hơn.`
+  );
+  setText('#insight-streak', `${streak} ngày`);
+  setText(
+    '#insight-streak-copy',
+    streak >= 3 ? 'Đang tạo được nhịp ngủ ổn định.' : 'Cần thêm vài ngày đạt mục tiêu liên tiếp.'
+  );
+}
+
 function toDate(value) {
   if (!value) return null;
   const date = new Date(value);
@@ -415,6 +472,12 @@ export async function loadSleepData(range = 'week') {
       setStatCard('analytics-change', 'Mục tiêu', '--', 'Cần dữ liệu để so sánh');
       setStatCard('analytics-latency', 'Chìm giấc', '--', 'Chưa có dữ liệu');
       setStatCard('analytics-quality', 'Chất lượng', '--', 'Chưa có dữ liệu');
+      setText('#insight-sleep-debt', '--');
+      setText('#insight-sleep-debt-copy', 'So với mục tiêu 8h mỗi đêm.');
+      setText('#insight-consistency', '--');
+      setText('#insight-consistency-copy', 'Dựa trên độ lệch giờ đi ngủ.');
+      setText('#insight-streak', '--');
+      setText('#insight-streak-copy', 'Số bản ghi liên tiếp đạt từ 7h.');
       setText('#analytics-screen .ai-card h4', rangeCopy.noDataTitle);
       setText('#analytics-screen .ai-card p', rangeCopy.empty);
       return;
@@ -481,6 +544,7 @@ export async function loadSleepData(range = 'week') {
       setStatCard('analytics-quality', 'Chất lượng TB', `${avgQuality}/100`, `Hiệu suất TB ${avgEfficiency}%`);
     }
     if (changeEl && range !== 'today') changeEl.style.color = goalRate >= 70 ? '#10b981' : '#ef4444';
+    updateInsightPanel(data);
 
     const trendTitle = avgQuality >= 85 ? 'Giấc ngủ đang ổn định' : 'Cần cải thiện nhẹ';
     const trendPrefix = range === 'today' ? 'Ngày đã chọn' : range === 'month' ? 'Tháng này' : 'Tuần này';
