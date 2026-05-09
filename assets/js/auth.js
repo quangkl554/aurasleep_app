@@ -51,6 +51,8 @@ function applyMembershipUi(user) {
       ? '<i class="fa-solid fa-arrow-up" style="margin-right: 8px;"></i> Đã nâng cấp'
       : '<i class="fa-solid fa-check" style="margin-right: 8px;"></i> Đang sử dụng';
   }
+
+  window.applySoundAccessUi?.();
 }
 
 function saveRememberedLogin(identifier, shouldRemember) {

@@ -75,6 +75,7 @@ export const SOUND_FILE_MAP = {
   stream: 'water stream.mp3', white: 'white noise.mp3', birds: 'bird.mp3',
   wind: 'wind.mp3', meditation: 'deep relaxing.mp3', alpha: 'alpha waves.mp3'
 };
+const FREE_SOUND_KEYS = new Set(['rain', 'ocean', 'brown', 'pink', 'piano', 'white']);
 
 export const soundPlayer = new Audio();
 soundPlayer.loop = true;
@@ -92,6 +93,10 @@ export function stopActiveSound() {
 
 export function playSound(soundKey, stopAfterMinutes = null) {
   if (!soundKey) { stopActiveSound(); return; }
+  if (isSoundLocked(soundKey)) {
+    alert('Âm thanh này được mở khóa trong bản Premium.');
+    return;
+  }
   const fileName = SOUND_FILE_MAP[soundKey];
   if (!fileName) return;
 
@@ -131,6 +136,34 @@ export async function fetchDeviceData() {
 }
 
 window.fetchDeviceData = fetchDeviceData;
+
+function isSoundLocked(soundKey) {
+  return !window.hasPremiumAccess && !FREE_SOUND_KEYS.has(soundKey);
+}
+
+export function applySoundAccessUi() {
+  document.querySelectorAll('.sound-item, .routine-sound-option').forEach(item => {
+    const soundKey = item.dataset.sound || item.dataset.routineSound;
+    const locked = isSoundLocked(soundKey);
+    item.classList.toggle('sound-locked', locked);
+    item.setAttribute('aria-disabled', String(locked));
+    item.title = locked ? 'Mở khóa trong bản Premium' : '';
+  });
+
+  const activeRoutine = document.querySelector('.routine-sound-option.active');
+  if (activeRoutine && isSoundLocked(activeRoutine.dataset.routineSound)) {
+    const fallback = document.querySelector('.routine-sound-option[data-routine-sound="rain"]');
+    if (fallback) selectRoutineSound(fallback);
+  }
+
+  const activeSound = document.querySelector('.sound-item.active');
+  if (activeSound && isSoundLocked(activeSound.dataset.sound)) {
+    activeSound.classList.remove('active');
+    stopActiveSound();
+  }
+}
+
+window.applySoundAccessUi = applySoundAccessUi;
 
 export function toggleDeviceHistory() {
   const card = document.getElementById('device-history-card');
@@ -255,6 +288,10 @@ export async function saveRoutineBuilder(event) {
   event.preventDefault();
   const form = event.currentTarget;
   const selectedSound = document.querySelector('.routine-sound-option.active')?.dataset.routineSound || 'rain';
+  if (isSoundLocked(selectedSound)) {
+    alert('Âm thanh này được mở khóa trong bản Premium.');
+    return;
+  }
   const soundName = document.querySelector('.routine-sound-option.active span')?.textContent || 'Mưa rào';
   const repeatDays = Array.from(form.querySelectorAll('[name="repeatDays"]:checked')).map(input => input.value);
   const startTime = form.elements.startTime.value || '22:00';
@@ -375,7 +412,12 @@ export async function activateRoutine(btn) {
     btn.innerHTML = '<i class="fa-solid fa-play"></i> Bắt đầu';
     isAudioSessionActive = false;
   } else {
-    playSound('rain', 45);
+    const selectedSound = document.querySelector('.routine-sound-option.active')?.dataset.routineSound || 'rain';
+    if (isSoundLocked(selectedSound)) {
+      alert('Âm thanh này được mở khóa trong bản Premium.');
+      return;
+    }
+    playSound(selectedSound, 45);
     isAudioSessionActive = true;
     btn.classList.add('routine-active');
     btn.innerHTML = '<i class="fa-solid fa-stop"></i> Dừng';
@@ -385,9 +427,13 @@ export async function activateRoutine(btn) {
 window.activateRoutine = activateRoutine;
 
 export function selectRoutineSound(button) {
+  const soundKey = button.dataset.routineSound;
+  if (isSoundLocked(soundKey)) {
+    alert('Âm thanh này được mở khóa trong bản Premium.');
+    return;
+  }
   document.querySelectorAll('.routine-sound-option').forEach(opt => opt.classList.remove('active'));
   button.classList.add('active');
-  const soundKey = button.dataset.routineSound;
   document.querySelectorAll('.routine-selected-sound').forEach(el => el.textContent = button.querySelector('span').textContent);
 }
 
@@ -406,11 +452,16 @@ export function initSoundGrid() {
   const visualizer = document.getElementById('audio-visualizer');
   const soundNameSpan = document.getElementById('playing-sound-name');
   const soundFreqSpan = document.getElementById('playing-sound-freq');
+  applySoundAccessUi();
 
   soundItems.forEach(item => {
     item.addEventListener('click', () => {
       const isActive = item.classList.contains('active');
       const soundKey = item.dataset.sound;
+      if (isSoundLocked(soundKey)) {
+        alert('Âm thanh này được mở khóa trong bản Premium.');
+        return;
+      }
 
       if (!isActive) {
         soundItems.forEach(i => i.classList.remove('active'));
