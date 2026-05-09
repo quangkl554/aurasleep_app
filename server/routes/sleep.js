@@ -6,27 +6,43 @@ const { Op } = require('sequelize');
 const { trackActivity } = require('../utils/tracking');
 
 // @route   GET /api/sleep
-// @desc    Lấy dữ liệu giấc ngủ theo khoảng thời gian
+// @desc    Get sleep records by range, optionally anchored to a selected date
 // @access  Private
 router.get('/', auth, async (req, res) => {
     try {
         const range = req.query.range || 'week'; // 'today', 'week', 'month'
-        
-        let startDate = new Date();
+        const selectedDate = typeof req.query.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(req.query.date)
+            ? req.query.date
+            : null;
+
+        let startDate = selectedDate ? new Date(`${selectedDate}T00:00:00`) : new Date();
+        let endDate = null;
+
         if (range === 'today') {
-            startDate.setHours(0, 0, 0, 0); // Đầu ngày hôm nay
+            startDate.setHours(0, 0, 0, 0);
+            endDate = new Date(startDate);
+            endDate.setDate(endDate.getDate() + 1);
         } else if (range === 'week') {
-            startDate.setDate(startDate.getDate() - 7); // 7 ngày trước
+            startDate.setDate(startDate.getDate() - 6);
+            startDate.setHours(0, 0, 0, 0);
+            endDate = selectedDate ? new Date(`${selectedDate}T00:00:00`) : new Date();
+            endDate.setHours(0, 0, 0, 0);
+            endDate.setDate(endDate.getDate() + 1);
         } else if (range === 'month') {
-            startDate.setMonth(startDate.getMonth() - 1); // 1 tháng trước
+            startDate.setDate(1);
+            startDate.setHours(0, 0, 0, 0);
+            endDate = new Date(startDate);
+            endDate.setMonth(endDate.getMonth() + 1);
         }
+
+        const dateFilter = endDate
+            ? { [Op.gte]: startDate, [Op.lt]: endDate }
+            : { [Op.gte]: startDate };
 
         const records = await SleepRecord.findAll({
             where: {
                 userId: req.user.id,
-                date: {
-                    [Op.gte]: startDate
-                }
+                date: dateFilter
             },
             order: [['date', 'ASC']]
         });
@@ -34,12 +50,12 @@ router.get('/', auth, async (req, res) => {
         res.json(records);
     } catch (err) {
         console.error(err.message);
-        res.status(500).send('Lỗi Server');
+        res.status(500).send('Loi Server');
     }
 });
 
 // @route   POST /api/sleep
-// @desc    Thêm bản ghi giấc ngủ mới
+// @desc    Add or update a sleep record
 // @access  Private
 router.post('/', auth, async (req, res) => {
     try {

@@ -253,16 +253,26 @@ export function navigateTo(screenId, navElement = null) {
   if (screenId === 'analytics' && window.loadSleepData) window.loadSleepData('week');
   if (screenId === 'routine' && window.fetchRoutines) window.fetchRoutines();
 
+  const pulseNavItem = (item) => {
+    if (!item) return;
+    item.classList.remove('nav-pressed');
+    void item.offsetWidth;
+    item.classList.add('nav-pressed');
+    setTimeout(() => item.classList.remove('nav-pressed'), 520);
+  };
+
   if (navElement) {
     const navItems = document.querySelectorAll('.nav-item');
     navItems.forEach(item => item.classList.remove('active'));
     navElement.classList.add('active');
+    pulseNavItem(navElement);
   } else {
     const navMapping = { 'device': 0, 'analytics': 1, 'dashboard': 2, 'store': 3, 'profile': 4 };
     if (navMapping[screenId] !== undefined) {
       const navItems = document.querySelectorAll('.nav-item');
       navItems.forEach(item => item.classList.remove('active'));
       navItems[navMapping[screenId]].classList.add('active');
+      pulseNavItem(navItems[navMapping[screenId]]);
     }
   }
   

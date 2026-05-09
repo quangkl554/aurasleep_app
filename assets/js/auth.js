@@ -3,6 +3,55 @@ import { navigateTo, showAppConfirm } from './ui.js';
 import { stopActiveSound } from './device.js';
 import { ensureWelcomeNotification, rememberNotificationUser } from './notifications.js';
 
+const REMEMBER_LOGIN_KEY = 'aurasleep_remember_login';
+
+function encodeRememberedPassword(password) {
+  try {
+    return btoa(unescape(encodeURIComponent(password || '')));
+  } catch {
+    return '';
+  }
+}
+
+function decodeRememberedPassword(value) {
+  try {
+    return decodeURIComponent(escape(atob(value || '')));
+  } catch {
+    return '';
+  }
+}
+
+function saveRememberedLogin(identifier, password, shouldRemember) {
+  if (!shouldRemember) {
+    localStorage.removeItem(REMEMBER_LOGIN_KEY);
+    return;
+  }
+
+  localStorage.setItem(REMEMBER_LOGIN_KEY, JSON.stringify({
+    identifier,
+    password: encodeRememberedPassword(password),
+    savedAt: new Date().toISOString()
+  }));
+}
+
+export function initRememberedLogin() {
+  const form = document.getElementById('login-form');
+  const checkbox = document.getElementById('remember-login');
+  if (!form || !checkbox) return;
+
+  try {
+    const saved = JSON.parse(localStorage.getItem(REMEMBER_LOGIN_KEY) || 'null');
+    if (!saved) return;
+    const identifierInput = form.querySelector('[name="identifier"]');
+    const passwordInput = form.querySelector('[name="password"]');
+    if (identifierInput) identifierInput.value = saved.identifier || '';
+    if (passwordInput) passwordInput.value = decodeRememberedPassword(saved.password);
+    checkbox.checked = true;
+  } catch {
+    localStorage.removeItem(REMEMBER_LOGIN_KEY);
+  }
+}
+
 export function updateUserUi(user) {
   rememberNotificationUser(user);
   const displayName = user.fullName || 'AURASLEEP';
@@ -38,7 +87,7 @@ export async function fetchUserInfo(token) {
   }
 }
 
-export async function handleLogin(identifier, password) {
+export async function handleLogin(identifier, password, rememberLogin = false) {
   try {
     const res = await apiFetch('/api/auth/login', {
       method: 'POST',
@@ -51,6 +100,7 @@ export async function handleLogin(identifier, password) {
       localStorage.setItem('aurasleep_token', data.token);
       updateUserUi(data.user);
       ensureWelcomeNotification(data.user);
+      saveRememberedLogin(identifier, password, rememberLogin);
       navigateTo('dashboard');
     } else {
       const err = await res.json().catch(() => ({}));
@@ -65,6 +115,7 @@ export async function handleLoginFromForm(button) {
   const form = document.getElementById('login-form');
   const identifier = form?.querySelector('[name="identifier"]')?.value.trim();
   const password = form?.querySelector('[name="password"]')?.value;
+  const rememberLogin = Boolean(form?.querySelector('[name="rememberLogin"]')?.checked);
 
   if (!identifier || !password) {
     alert('Vui lòng nhập email hoặc số điện thoại và mật khẩu.');
@@ -74,7 +125,7 @@ export async function handleLoginFromForm(button) {
   const originalText = button.textContent;
   button.disabled = true;
   button.textContent = 'Đang đăng nhập...';
-  await handleLogin(identifier, password);
+  await handleLogin(identifier, password, rememberLogin);
   button.disabled = false;
   button.textContent = originalText;
 }

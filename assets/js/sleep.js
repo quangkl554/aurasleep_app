@@ -223,10 +223,10 @@ function buildMonthChart(records) {
 function getRangeCopy(range, recordCount) {
   if (range === 'today') {
     return {
-      title: 'Tổng quan hôm nay',
-      label: 'Bản ghi hôm nay',
-      empty: 'Chưa có dữ liệu hôm nay. Hãy ghi nhận giấc ngủ mới để xem tổng quan.',
-      noDataTitle: 'Chưa có dữ liệu hôm nay'
+      title: 'Tổng quan theo ngày',
+      label: 'Ngày đã chọn',
+      empty: 'Chưa có dữ liệu cho ngày đã chọn. Hãy ghi nhận giấc ngủ hoặc chọn ngày khác.',
+      noDataTitle: 'Chưa có dữ liệu ngày này'
     };
   }
   if (range === 'month') {
@@ -243,6 +243,42 @@ function getRangeCopy(range, recordCount) {
     empty: 'Chưa có dữ liệu. Hãy ghi nhận giấc ngủ để xem biểu đồ.',
     noDataTitle: 'Chưa có dữ liệu'
   };
+}
+
+function getAnalyticsDate() {
+  const input = document.getElementById('analytics-date-input');
+  if (!input) return getTodayDateString();
+  if (!input.value) input.value = getTodayDateString();
+  return input.value;
+}
+
+function setRing(selector, value, label) {
+  const ring = document.querySelector(selector);
+  if (!ring) return;
+  const safeValue = Math.max(0, Math.min(100, Number(value) || 0));
+  ring.style.setProperty('--ring-value', `${safeValue}%`);
+  const labelEl = ring.querySelector('span');
+  if (labelEl) labelEl.textContent = label;
+}
+
+function updateDayRings(record, isVisible) {
+  const grid = document.getElementById('day-rings-grid');
+  if (!grid) return;
+  grid.classList.toggle('active', Boolean(isVisible && record));
+  grid.setAttribute('aria-hidden', String(!(isVisible && record)));
+  if (!isVisible || !record) return;
+
+  const totalSleepMin = Number(record.totalSleepMin) || 0;
+  const efficiency = Number(record.efficiency) || 0;
+  const latency = Number(record.fallAsleepMin) || 0;
+  const score = Number(record.sleepScore) || 0;
+  const durationPercent = Math.max(0, Math.min(100, (totalSleepMin / 480) * 100));
+  const latencyPercent = Math.max(0, Math.min(100, 100 - (latency / 45) * 75));
+
+  setRing('[data-ring="duration"]', durationPercent, formatSleepDuration(totalSleepMin));
+  setRing('[data-ring="efficiency"]', efficiency, `${efficiency}%`);
+  setRing('[data-ring="latency"]', latencyPercent, `${latency}p`);
+  setRing('[data-ring="score"]', score, `${score}`);
 }
 
 export function getRhythmLabel(record) {
@@ -299,7 +335,8 @@ export async function loadSleepData(range = 'week') {
   });
 
   try {
-    const res = await apiFetch('/api/sleep?range=' + range);
+    const selectedDate = getAnalyticsDate();
+    const res = await apiFetch(`/api/sleep?range=${range}&date=${encodeURIComponent(selectedDate)}`);
     const data = await res.json();
     
     const bars = document.querySelectorAll('#sleep-chart .chart-bar');
@@ -311,6 +348,7 @@ export async function loadSleepData(range = 'week') {
     const rangeCopy = getRangeCopy(range, data?.length || 0);
     if (rangeLabel) rangeLabel.textContent = rangeCopy.label;
     if (chartTitle) chartTitle.textContent = rangeCopy.title;
+    updateDayRings(null, false);
 
     bars.forEach(bar => {
       bar.style.height = '10%';
@@ -343,6 +381,7 @@ export async function loadSleepData(range = 'week') {
     }
 
     emptyState?.classList.remove('visible');
+    const dayRecord = data[data.length - 1];
     const chartData = range === 'today'
       ? buildTodayChart(data)
       : range === 'month'
@@ -363,6 +402,7 @@ export async function loadSleepData(range = 'week') {
       if (dayLabel) dayLabel.textContent = item.label;
       if (item.title && containers[index]) containers[index].setAttribute('title', item.title);
     });
+    updateDayRings(dayRecord, range === 'today');
 
     const avgSleep = Math.round(average(data, 'totalSleepMin'));
     const avgLatency = Math.round(average(data, 'fallAsleepMin'));
@@ -382,7 +422,7 @@ export async function loadSleepData(range = 'week') {
     if (changeEl) changeEl.style.color = changeText.startsWith('-') ? '#ef4444' : '#10b981';
 
     const trendTitle = avgQuality >= 85 ? 'Giấc ngủ đang ổn định' : 'Cần cải thiện nhẹ';
-    const trendPrefix = range === 'today' ? 'Bản ghi hôm nay' : range === 'month' ? 'Tháng này' : 'Tuần này';
+    const trendPrefix = range === 'today' ? 'Ngày đã chọn' : range === 'month' ? 'Tháng này' : 'Tuần này';
     const trendCopy = avgQuality >= 85
       ? `${trendPrefix}: trung bình ${formatSleepDuration(avgSleep)}, chất lượng ${avgQuality}/100. Hãy giữ khung giờ ngủ hiện tại.`
       : `${trendPrefix}: trung bình ${formatSleepDuration(avgSleep)}, chất lượng ${avgQuality}/100. Hãy thử giảm ánh sáng mạnh và bắt đầu routine sớm hơn.`;

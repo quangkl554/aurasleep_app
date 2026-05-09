@@ -1,7 +1,7 @@
 import { apiFetch, getToken } from './api.js';
 import { navigateTo, hideSplash, toggleTheme } from './ui.js';
-import { fetchUserInfo } from './auth.js';
-import { loadDashboardData, loadSleepData } from './sleep.js';
+import { fetchUserInfo, initRememberedLogin } from './auth.js';
+import { getTodayDateString, loadDashboardData, loadSleepData } from './sleep.js';
 import { fetchDeviceData, fetchRoutines, initDeviceControls, initSoundGrid } from './device.js';
 import './chat.js';
 
@@ -30,8 +30,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Event Listeners for Sliders or other global UI elements not handled in modules
+  initRememberedLogin();
   initSoundGrid();
   initDeviceControls();
+
+  const analyticsDateInput = document.getElementById('analytics-date-input');
+  if (analyticsDateInput) {
+    analyticsDateInput.value = getTodayDateString();
+    analyticsDateInput.addEventListener('change', () => {
+      const activeRange = document.querySelector('#analytics-tabs .auth-tab.active')?.dataset.tab || 'week';
+      loadSleepData(activeRange);
+    });
+  }
 
   document.querySelectorAll('#analytics-tabs .auth-tab').forEach(tab => {
     tab.addEventListener('click', () => {

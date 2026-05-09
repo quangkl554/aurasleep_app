@@ -47,7 +47,11 @@
           <div class="form-group">
             <input type="password" class="form-input" name="password" placeholder="Mật khẩu" autocomplete="current-password">
           </div>
-          <div style="text-align: right; margin-bottom: 20px;">
+          <div class="remember-login-row">
+            <label class="remember-login">
+              <input type="checkbox" name="rememberLogin" id="remember-login">
+              <span>Nhớ đăng nhập</span>
+            </label>
             <a href="#" style="color: var(--accent-secondary); font-size: 13px; text-decoration: none;">Quên mật khẩu?</a>
           </div>
           <button type="submit" class="btn btn-primary w-100">Đăng nhập ngay</button>
@@ -300,6 +304,11 @@
         <div class="auth-tab" data-tab="month">Tháng</div>
       </div>
 
+      <label class="analytics-date-control">
+        <span>Chọn ngày phân tích</span>
+        <input type="date" id="analytics-date-input">
+      </label>
+
       <div class="glass-panel analytics-chart-panel mb-4" id="sleep-chart">
         <div class="chart-header">
           <div>
@@ -319,6 +328,25 @@
           <div class="chart-bar-container" onclick="selectBar(this)"><span class="chart-value"></span><div class="chart-bar"></div><span class="chart-label">--</span></div>
           <div class="chart-bar-container" onclick="selectBar(this)"><span class="chart-value"></span><div class="chart-bar"></div><span class="chart-label">--</span></div>
           <div class="chart-bar-container" onclick="selectBar(this)"><span class="chart-value"></span><div class="chart-bar"></div><span class="chart-label">--</span></div>
+        </div>
+      </div>
+
+      <div class="day-rings-grid" id="day-rings-grid" aria-hidden="true">
+        <div class="day-ring-card">
+          <div class="day-ring" data-ring="duration"><span>--</span></div>
+          <p>Thời lượng</p>
+        </div>
+        <div class="day-ring-card">
+          <div class="day-ring" data-ring="efficiency"><span>--</span></div>
+          <p>Hiệu suất</p>
+        </div>
+        <div class="day-ring-card">
+          <div class="day-ring" data-ring="latency"><span>--</span></div>
+          <p>Chìm giấc</p>
+        </div>
+        <div class="day-ring-card">
+          <div class="day-ring" data-ring="score"><span>--</span></div>
+          <p>Điểm ngủ</p>
         </div>
       </div>
 
