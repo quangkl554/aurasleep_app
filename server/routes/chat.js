@@ -12,8 +12,6 @@ function buildFallbackReply(message) {
 
     if (text.includes('khó ngủ') || text.includes('kho ngu') || text.includes('mất ngủ') || text.includes('mat ngu')) {
         return [
-            'Mình đang dùng chế độ AuraBot dự phòng vì AI cloud chưa phản hồi ổn định.',
-            '',
             'Tối nay bạn có thể thử routine 20-30 phút:',
             '- Giảm ánh sáng màn hình và đèn phòng.',
             '- Chọn âm thanh nhẹ như Mưa rào, Sóng biển hoặc Thiền sâu.',
@@ -24,8 +22,6 @@ function buildFallbackReply(message) {
 
     if (text.includes('âm thanh') || text.includes('am thanh') || text.includes('nhạc') || text.includes('nhac')) {
         return [
-            'Mình đang dùng chế độ AuraBot dự phòng vì AI cloud chưa phản hồi ổn định.',
-            '',
             'Gợi ý âm thanh:',
             '- Mưa rào: phù hợp khi cần che tiếng ồn bên ngoài.',
             '- Sóng biển: nhịp đều, dễ thư giãn.',
@@ -35,8 +31,6 @@ function buildFallbackReply(message) {
     }
 
     return [
-        'Mình đang dùng chế độ AuraBot dự phòng vì AI cloud chưa phản hồi ổn định.',
-        '',
         'Bạn có thể bắt đầu bằng 3 việc đơn giản:',
         '- Ghi nhận giấc ngủ tối qua để dashboard có dữ liệu thật.',
         '- Chọn một routine thư giãn 30-45 phút.',

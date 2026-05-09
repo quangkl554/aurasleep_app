@@ -2,7 +2,7 @@ import { apiFetch, getToken } from './api.js';
 import { navigateTo, hideSplash, toggleTheme } from './ui.js';
 import { fetchUserInfo } from './auth.js';
 import { loadDashboardData, loadSleepData } from './sleep.js';
-import { fetchDeviceData, fetchRoutines, initSoundGrid } from './device.js';
+import { fetchDeviceData, fetchRoutines, initDeviceControls, initSoundGrid } from './device.js';
 import './chat.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Event Listeners for Sliders or other global UI elements not handled in modules
   initSoundGrid();
+  initDeviceControls();
 
   document.querySelectorAll('#analytics-tabs .auth-tab').forEach(tab => {
     tab.addEventListener('click', () => {
@@ -40,12 +41,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  const intensitySlider = document.getElementById('intensity-slider');
-  if (intensitySlider) {
-    intensitySlider.addEventListener('input', (e) => {
-      document.getElementById('light-val').textContent = e.target.value + '%';
-    });
-  }
 });
 
 // Expose some functions to window for global access if needed

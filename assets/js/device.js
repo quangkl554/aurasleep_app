@@ -5,9 +5,7 @@ let updateSettingsTimeout;
 function debounceUpdateSettings(data) {
   clearTimeout(updateSettingsTimeout);
   updateSettingsTimeout = setTimeout(async () => {
-    const token = localStorage.getItem('aurasleep_token');
     try {
-      // Lấy deviceId từ API nếu chưa có
       const resDev = await apiFetch('/api/devices');
       const devices = await resDev.json();
       if (devices.length > 0) {
@@ -19,6 +17,56 @@ function debounceUpdateSettings(data) {
       }
     } catch (e) { console.error('Lưu cài đặt lỗi:', e); }
   }, 500);
+}
+
+function colorTempToRgb(kelvin) {
+  const temp = Math.max(2700, Math.min(6500, Number(kelvin) || 3200)) / 100;
+  let red;
+  let green;
+  let blue;
+
+  if (temp <= 66) {
+    red = 255;
+    green = 99.4708025861 * Math.log(temp) - 161.1195681661;
+    blue = temp <= 19 ? 0 : 138.5177312231 * Math.log(temp - 10) - 305.0447927307;
+  } else {
+    red = 329.698727446 * Math.pow(temp - 60, -0.1332047592);
+    green = 288.1221695283 * Math.pow(temp - 60, -0.0755148492);
+    blue = 255;
+  }
+
+  const clamp = value => Math.round(Math.max(0, Math.min(255, value)));
+  return `${clamp(red)}, ${clamp(green)}, ${clamp(blue)}`;
+}
+
+function getTempLabel(colorTemp) {
+  if (colorTemp < 3400) return 'Ấm áp';
+  if (colorTemp < 5000) return 'Trung tính';
+  return 'Mát dịu';
+}
+
+export function updateLightPreview({ lightIntensity, colorTemp }) {
+  const intensity = Math.max(0, Math.min(100, Number(lightIntensity) || 0));
+  const temp = Math.max(2700, Math.min(6500, Number(colorTemp) || 3200));
+  const rgb = colorTempToRgb(temp);
+  const display = document.getElementById('light-display');
+  const icon = document.getElementById('light-icon');
+  const lightVal = document.getElementById('light-val');
+  const tempVal = document.getElementById('temp-val');
+  const alpha = Math.max(0.08, intensity / 100);
+
+  if (lightVal) lightVal.textContent = `${intensity}%`;
+  if (tempVal) tempVal.textContent = `${temp}K · ${getTempLabel(temp)}`;
+  if (display) {
+    display.style.background = `radial-gradient(circle, rgba(${rgb}, ${0.18 + alpha * 0.48}) 0%, rgba(${rgb}, ${0.08 + alpha * 0.22}) 42%, rgba(${rgb}, 0) 72%)`;
+    display.style.boxShadow = intensity > 0 ? `0 0 ${18 + intensity * 0.45}px rgba(${rgb}, ${0.12 + alpha * 0.34})` : 'none';
+    display.style.opacity = intensity > 0 ? '1' : '0.45';
+  }
+  if (icon) {
+    icon.style.color = `rgb(${rgb})`;
+    icon.style.textShadow = intensity > 0 ? `0 0 ${14 + intensity * 0.45}px rgba(${rgb}, ${0.35 + alpha * 0.45})` : 'none';
+    icon.style.transform = `scale(${0.92 + intensity / 900})`;
+  }
 }
 
 export const SOUND_FILE_MAP = {
@@ -68,13 +116,47 @@ export async function fetchDeviceData() {
     const devices = await res.json();
     if (devices.length > 0) {
       const dev = devices[0];
-      // Update Sliders UI here if needed
+      const intensitySlider = document.getElementById('intensity-slider');
+      const tempSlider = document.getElementById('temp-slider');
+      if (intensitySlider) intensitySlider.value = dev.lightIntensity ?? 60;
+      if (tempSlider) tempSlider.value = dev.colorTemp ?? 3200;
+      updateLightPreview({
+        lightIntensity: dev.lightIntensity ?? 60,
+        colorTemp: dev.colorTemp ?? 3200
+      });
       setActiveSoundUi(dev.activeSound);
     }
   } catch (e) { console.error(e); }
 }
 
 window.fetchDeviceData = fetchDeviceData;
+
+export function initDeviceControls() {
+  const intensitySlider = document.getElementById('intensity-slider');
+  const tempSlider = document.getElementById('temp-slider');
+  const getState = () => ({
+    lightIntensity: Number(intensitySlider?.value || 60),
+    colorTemp: Number(tempSlider?.value || 3200)
+  });
+
+  updateLightPreview(getState());
+
+  if (intensitySlider) {
+    intensitySlider.addEventListener('input', () => {
+      const state = getState();
+      updateLightPreview(state);
+      debounceUpdateSettings({ lightIntensity: state.lightIntensity });
+    });
+  }
+
+  if (tempSlider) {
+    tempSlider.addEventListener('input', () => {
+      const state = getState();
+      updateLightPreview(state);
+      debounceUpdateSettings({ colorTemp: state.colorTemp });
+    });
+  }
+}
 
 export async function toggleSleepMode(btn) {
   const isSleep = btn.classList.contains('active-sleep');

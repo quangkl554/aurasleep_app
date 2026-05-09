@@ -1,8 +1,10 @@
 import { apiFetch, clearSession } from './api.js';
 import { navigateTo, showAppConfirm } from './ui.js';
 import { stopActiveSound } from './device.js';
+import { ensureWelcomeNotification, rememberNotificationUser } from './notifications.js';
 
 export function updateUserUi(user) {
+  rememberNotificationUser(user);
   const displayName = user.fullName || 'AURASLEEP';
   const nameElements = document.querySelectorAll('.header-greeting h2, h2');
   nameElements.forEach(el => {
@@ -21,6 +23,7 @@ export async function fetchUserInfo(token) {
     if (res.ok) {
       const user = await res.json();
       updateUserUi(user);
+      ensureWelcomeNotification(user);
       return true;
     } else {
       clearSession();
@@ -47,6 +50,7 @@ export async function handleLogin(identifier, password) {
       const data = await res.json();
       localStorage.setItem('aurasleep_token', data.token);
       updateUserUi(data.user);
+      ensureWelcomeNotification(data.user);
       navigateTo('dashboard');
     } else {
       const err = await res.json().catch(() => ({}));
@@ -104,6 +108,7 @@ export async function handleRegister(fullName, email, password, phone) {
       const data = await res.json();
       localStorage.setItem('aurasleep_token', data.token);
       updateUserUi(data.user);
+      ensureWelcomeNotification(data.user);
       navigateTo('dashboard');
     } else {
       const err = await res.json().catch(() => ({}));

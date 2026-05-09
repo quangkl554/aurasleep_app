@@ -36,8 +36,8 @@
       
       <div class="glass-panel" style="padding: 24px;">
         <div class="auth-tabs">
-          <div class="auth-tab active">Đăng nhập</div>
-          <div class="auth-tab">Đăng ký</div>
+          <div class="auth-tab active" id="login-tab" onclick="switchAuthMode('login')">Đăng nhập</div>
+          <div class="auth-tab" id="register-tab" onclick="switchAuthMode('register')">Đăng ký</div>
         </div>
         
         <form id="login-form" onsubmit="handleLoginFromForm(this.querySelector('button')); return false;">
@@ -98,7 +98,7 @@
       </div>
       <div class="header-actions">
         <div class="icon-btn" onclick="toggleTheme()"><i class="fa-solid fa-circle-half-stroke"></i></div>
-        <div class="icon-btn" onclick="alert('Bạn chưa có thông báo mới!')"><i class="fa-regular fa-bell"></i></div>
+        <div class="icon-btn notification-trigger" onclick="openNotificationHistory()"><i class="fa-regular fa-bell"></i></div>
       </div>
     </div>
 
@@ -202,7 +202,7 @@
       <div class="slider-container mb-8">
         <div class="slider-header">
           <span>Nhiệt độ màu</span>
-          <span>Ấm áp</span>
+          <span id="temp-val">3200K · Ấm áp</span>
         </div>
         <input type="range" min="2700" max="6500" value="3200" id="temp-slider" style="background: linear-gradient(to right, #ff8c00, #fefcf3, #e0f2fe);">
       </div>
@@ -300,66 +300,44 @@
         <div class="auth-tab" data-tab="month">Tháng</div>
       </div>
 
-      <div class="glass-panel mb-4" style="padding: 20px 20px 10px; height: 240px; display: flex; flex-direction: column; justify-content: flex-end;" id="mock-chart">
-        <div style="display: flex; align-items:flex-end; justify-content:space-between; gap: 8px; height: 180px; position: relative;">
-          <!-- Grid Lines -->
-          <div style="position: absolute; width: 100%; height: 1px; background: var(--border); bottom: 50%; z-index: 0;"></div>
-          <div style="position: absolute; width: 100%; height: 1px; background: var(--border); bottom: 100%; z-index: 0;"></div>
-          
-          <div class="chart-bar-container" style="width: 12%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; z-index: 1;" onclick="selectBar(this)">
-            <span class="chart-value" style="font-size: 10px; margin-bottom: 4px; font-weight: 600;">6.5h</span>
-            <div class="chart-bar" style="width: 100%; height: 60%; background: var(--border); border-radius: 4px; transition: all 0.5s;"></div>
-            <span style="font-size: 10px; margin-top: 8px; color: var(--text-secondary);">T2</span>
+      <div class="glass-panel analytics-chart-panel mb-4" id="sleep-chart">
+        <div class="chart-header">
+          <div>
+            <span class="chart-kicker">Dữ liệu thật</span>
+            <h3>Thời lượng ngủ</h3>
           </div>
-          <div class="chart-bar-container" style="width: 12%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; z-index: 1;" onclick="selectBar(this)">
-            <span class="chart-value" style="font-size: 10px; margin-bottom: 4px; font-weight: 600;">7.2h</span>
-            <div class="chart-bar" style="width: 100%; height: 80%; background: var(--border); border-radius: 4px; transition: all 0.5s;"></div>
-            <span style="font-size: 10px; margin-top: 8px; color: var(--text-secondary);">T3</span>
-          </div>
-          <div class="chart-bar-container active" style="width: 12%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; z-index: 1;" onclick="selectBar(this)">
-            <span class="chart-value active-val" style="font-size: 10px; margin-bottom: 4px; font-weight: 800; color: var(--accent-primary);">6.8h</span>
-            <div class="chart-bar active" style="width: 100%; height: 100%; background: var(--accent-primary); border-radius: 4px; box-shadow: 0 0 10px rgba(244,162,97,0.5); transition: all 0.5s;"></div>
-            <span style="font-size: 10px; margin-top: 8px; color: var(--text-primary); font-weight: 700;">T4</span>
-          </div>
-          <div class="chart-bar-container" style="width: 12%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; z-index: 1;" onclick="selectBar(this)">
-            <span class="chart-value" style="font-size: 10px; margin-bottom: 4px; font-weight: 600;">8.0h</span>
-            <div class="chart-bar" style="width: 100%; height: 90%; background: var(--border); border-radius: 4px; transition: all 0.5s;"></div>
-            <span style="font-size: 10px; margin-top: 8px; color: var(--text-secondary);">T5</span>
-          </div>
-          <div class="chart-bar-container" style="width: 12%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; z-index: 1;" onclick="selectBar(this)">
-            <span class="chart-value" style="font-size: 10px; margin-bottom: 4px; font-weight: 600;">6.8h</span>
-            <div class="chart-bar" style="width: 100%; height: 75%; background: var(--border); border-radius: 4px; transition: all 0.5s;"></div>
-            <span style="font-size: 10px; margin-top: 8px; color: var(--text-secondary);">T6</span>
-          </div>
-          <div class="chart-bar-container" style="width: 12%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; z-index: 1;" onclick="selectBar(this)">
-            <span class="chart-value" style="font-size: 10px; margin-bottom: 4px; font-weight: 600;">8.5h</span>
-            <div class="chart-bar" style="width: 100%; height: 100%; background: var(--border); border-radius: 4px; transition: all 0.5s;"></div>
-            <span style="font-size: 10px; margin-top: 8px; color: var(--text-secondary);">T7</span>
-          </div>
-          <div class="chart-bar-container" style="width: 12%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; z-index: 1;" onclick="selectBar(this)">
-            <span class="chart-value" style="font-size: 10px; margin-bottom: 4px; font-weight: 600;">7.5h</span>
-            <div class="chart-bar" style="width: 100%; height: 85%; background: var(--border); border-radius: 4px; transition: all 0.5s;"></div>
-            <span style="font-size: 10px; margin-top: 8px; color: var(--text-secondary);">CN</span>
-          </div>
+          <span id="chart-range-label">7 ngày gần nhất</span>
+        </div>
+        <div class="chart-plot">
+          <div class="chart-grid-line high"></div>
+          <div class="chart-grid-line mid"></div>
+          <div class="chart-empty-state" id="chart-empty-state">Chưa có dữ liệu. Hãy ghi nhận giấc ngủ để xem biểu đồ.</div>
+          <div class="chart-bar-container" onclick="selectBar(this)"><span class="chart-value"></span><div class="chart-bar"></div><span class="chart-label">--</span></div>
+          <div class="chart-bar-container" onclick="selectBar(this)"><span class="chart-value"></span><div class="chart-bar"></div><span class="chart-label">--</span></div>
+          <div class="chart-bar-container" onclick="selectBar(this)"><span class="chart-value"></span><div class="chart-bar"></div><span class="chart-label">--</span></div>
+          <div class="chart-bar-container" onclick="selectBar(this)"><span class="chart-value"></span><div class="chart-bar"></div><span class="chart-label">--</span></div>
+          <div class="chart-bar-container" onclick="selectBar(this)"><span class="chart-value"></span><div class="chart-bar"></div><span class="chart-label">--</span></div>
+          <div class="chart-bar-container" onclick="selectBar(this)"><span class="chart-value"></span><div class="chart-bar"></div><span class="chart-label">--</span></div>
+          <div class="chart-bar-container" onclick="selectBar(this)"><span class="chart-value"></span><div class="chart-bar"></div><span class="chart-label">--</span></div>
         </div>
       </div>
 
-      <div class="stats-grid" style="grid-template-columns: 1fr 1fr; gap: 12px;">
-        <div class="glass-panel stat-item" style="align-items: flex-start; text-align: left; padding: 12px;">
+      <div class="stats-grid analytics-stats-grid">
+        <div class="glass-panel stat-item analytics-stat-card">
           <span class="stat-title">Trung bình</span>
-          <span class="stat-val" style="font-size: 20px; color: var(--accent-primary);">7h 15m</span>
+          <span class="stat-val" id="analytics-avg">--</span>
         </div>
-        <div class="glass-panel stat-item" style="align-items: flex-start; text-align: left; padding: 12px;">
+        <div class="glass-panel stat-item analytics-stat-card">
           <span class="stat-title">Thay đổi</span>
-          <span class="stat-val" style="font-size: 20px; color: #10b981;">+12%</span>
+          <span class="stat-val" id="analytics-change">--</span>
         </div>
-        <div class="glass-panel stat-item" style="align-items: flex-start; text-align: left; padding: 12px;">
+        <div class="glass-panel stat-item analytics-stat-card">
           <span class="stat-title">Chìm giấc</span>
-          <span class="stat-val" style="font-size: 20px;">12 phút</span>
+          <span class="stat-val" id="analytics-latency">--</span>
         </div>
-        <div class="glass-panel stat-item" style="align-items: flex-start; text-align: left; padding: 12px;">
+        <div class="glass-panel stat-item analytics-stat-card">
           <span class="stat-title">Chất lượng</span>
-          <span class="stat-val" style="font-size: 20px;">94/100</span>
+          <span class="stat-val" id="analytics-quality">--</span>
         </div>
       </div>
 
@@ -438,9 +416,9 @@
             <li class="disabled"><i class="fa-solid fa-xmark"></i> <span>AI cá nhân hóa Routine</span></li>
             <li class="disabled"><i class="fa-solid fa-xmark"></i> <span>Fade-in/Fade-out thông minh</span></li>
           </ul>
-          <button class="btn btn-outline w-100" disabled>
+          <div class="btn btn-outline w-100 plan-current" aria-label="Gói hiện tại">
             <i class="fa-solid fa-check" style="margin-right: 8px;"></i> Đang sử dụng
-          </button>
+          </div>
         </div>
       </div>
     </div>
@@ -470,7 +448,7 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
-        <a href="#" class="menu-item" style="border-bottom: 1px solid var(--border);" onclick="alert('Chưa có thông báo mới.')">
+        <a href="#" class="menu-item" style="border-bottom: 1px solid var(--border);" onclick="openNotificationHistory(); return false;">
           <div class="menu-icon"><i class="fa-regular fa-bell"></i></div>
           <div class="menu-text">Thông báo & Nhắc nhở</div>
           <i class="fa-solid fa-chevron-right menu-arrow"></i>
@@ -552,7 +530,7 @@
         <div class="icon-btn" onclick="navigateTo('dashboard')"><i class="fa-solid fa-arrow-left"></i></div>
         <h2 style="margin: 0;">Kiến thức Giấc ngủ</h2>
       </div>
-      <div class="icon-btn"><i class="fa-solid fa-magnifying-glass"></i></div>
+      <div class="icon-btn" onclick="alert('Tìm kiếm bài viết sẽ được bật ở bản tiếp theo.')"><i class="fa-solid fa-magnifying-glass"></i></div>
     </div>
 
     <div class="content-padding">
@@ -716,10 +694,6 @@
        BOTTOM NAVIGATION BAR
        =============================== -->
   <nav id="bottom-nav">
-    <div class="nav-item active" onclick="navigateTo('dashboard', this)">
-      <i class="fa-solid fa-house"></i>
-      <span>Trang chủ</span>
-    </div>
     <div class="nav-item" onclick="navigateTo('device', this)">
       <i class="fa-solid fa-lightbulb"></i>
       <span>Thiết bị</span>
@@ -727,6 +701,10 @@
     <div class="nav-item" onclick="navigateTo('analytics', this)">
       <i class="fa-solid fa-chart-simple"></i>
       <span>Phân tích</span>
+    </div>
+    <div class="nav-item nav-home active" onclick="navigateTo('dashboard', this)">
+      <i class="fa-solid fa-house"></i>
+      <span>Trang chủ</span>
     </div>
     <div class="nav-item" onclick="navigateTo('store', this)">
       <i class="fa-solid fa-cart-shopping"></i>
@@ -781,6 +759,21 @@
         <button class="app-prompt-secondary" type="button" onclick="resolveAppConfirm(false)">Hủy</button>
         <button class="app-alert-button app-confirm-primary" type="button" onclick="resolveAppConfirm(true)">Đăng xuất</button>
       </div>
+    </div>
+  </div>
+
+  <div id="notification-history-modal" class="app-alert-overlay notification-history-overlay" aria-hidden="true">
+    <div class="app-alert-dialog notification-history-dialog" role="dialog" aria-modal="true" aria-labelledby="notification-history-title">
+      <div class="notification-history-header">
+        <div>
+          <span class="chart-kicker">Lịch sử</span>
+          <h3 id="notification-history-title">Thông báo & Nhắc nhở</h3>
+        </div>
+        <button class="icon-btn" type="button" onclick="closeNotificationHistory()" aria-label="Đóng thông báo">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div id="notification-history-list" class="notification-history-list"></div>
     </div>
   </div>
 

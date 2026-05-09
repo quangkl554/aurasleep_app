@@ -18,8 +18,6 @@ function buildClientChatFallback(messageText) {
 
   if (normalized.includes('goi y am thanh') || normalized.includes('am thanh') || normalized.includes('nhac')) {
     return [
-      'AuraBot đang dùng chế độ dự phòng vì AI cloud chưa phản hồi ổn định.',
-      '',
       'Gợi ý âm thanh cho tối nay:',
       '- Mưa rào: che tiếng ồn tốt, dễ thư giãn.',
       '- Sóng biển: nhịp đều, phù hợp trước khi ngủ.',
@@ -30,8 +28,6 @@ function buildClientChatFallback(messageText) {
 
   if (normalized.includes('kho ngu') || normalized.includes('mat ngu')) {
     return [
-      'AuraBot đang dùng chế độ dự phòng vì AI cloud chưa phản hồi ổn định.',
-      '',
       'Bạn có thể thử routine 20-30 phút:',
       '- Giảm ánh sáng mạnh và tắt bớt thông báo.',
       '- Chọn âm thanh nhẹ như Mưa rào hoặc Thiền sâu.',
@@ -41,9 +37,9 @@ function buildClientChatFallback(messageText) {
   }
 
   return [
-    'AuraBot đang dùng chế độ dự phòng vì AI cloud chưa phản hồi ổn định.',
+    'Mình có thể hỗ trợ bạn ghi nhận giấc ngủ, xem dashboard, chọn âm thanh và bật routine thư giãn.',
     '',
-    'Bạn vẫn có thể ghi nhận giấc ngủ, xem dashboard, chọn âm thanh và bật routine thư giãn. Mình sẽ hỗ trợ bằng các gợi ý cơ bản trong lúc AI cloud được khôi phục.'
+    'Bạn muốn mình phân tích giấc ngủ gần nhất hay gợi ý một routine thư giãn cho tối nay?'
   ].join('\n');
 }
 

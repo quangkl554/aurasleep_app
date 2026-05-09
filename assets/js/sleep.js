@@ -114,6 +114,26 @@ export function formatSleepDuration(totalSleepMin = 0) {
   return `${h}h ${m}m`;
 }
 
+function average(records, field) {
+  const valid = records
+    .map(record => Number(record[field]))
+    .filter(value => Number.isFinite(value));
+  if (!valid.length) return 0;
+  return valid.reduce((sum, value) => sum + value, 0) / valid.length;
+}
+
+function formatPercentChange(current, previous) {
+  if (!previous) return '--';
+  const change = Math.round(((current - previous) / previous) * 100);
+  if (!Number.isFinite(change)) return '--';
+  return `${change > 0 ? '+' : ''}${change}%`;
+}
+
+function setText(selector, value) {
+  const element = document.querySelector(selector);
+  if (element) element.textContent = value;
+}
+
 export function getRhythmLabel(record) {
   if (!record) return 'Chưa có dữ liệu';
   if ((record.sleepScore || 0) >= 85 && (record.efficiency || 0) >= 85) return 'Ổn định';
@@ -134,18 +154,27 @@ export async function loadDashboardData() {
     const lastRecord = records[records.length - 1];
 
     const scoreValue = document.querySelector('#dashboard-screen .score-value');
+    const scoreCircle = document.querySelector('#dashboard-screen .score-circle');
     const statVals = document.querySelectorAll('#dashboard-screen .stat-val');
     const aiSuggestion = document.querySelector('#dashboard-screen .ai-card p');
+    const entryTitle = document.getElementById('dashboard-entry-title');
+    const entryCopy = document.getElementById('dashboard-entry-copy');
 
     if (!lastRecord) return;
 
     if (scoreValue) scoreValue.textContent = lastRecord.sleepScore ?? '--';
+    if (scoreCircle) {
+      const score = Math.max(0, Math.min(100, Number(lastRecord.sleepScore) || 0));
+      scoreCircle.style.background = `conic-gradient(var(--accent-primary) ${score}%, var(--card-bg) 0)`;
+    }
     if (statVals.length >= 3) {
       statVals[0].textContent = formatSleepDuration(lastRecord.totalSleepMin);
       statVals[1].textContent = `${lastRecord.efficiency}%`;
       statVals[2].textContent = getRhythmLabel(lastRecord);
     }
     if (aiSuggestion) aiSuggestion.textContent = getDashboardSuggestion(lastRecord);
+    if (entryTitle) entryTitle.textContent = 'Cập nhật giấc ngủ';
+    if (entryCopy) entryCopy.textContent = `Dữ liệu gần nhất: ${formatDateOnly(lastRecord.date)}. Bạn có thể cập nhật để phân tích chính xác hơn.`;
   } catch (err) { console.error(err); }
 }
 
@@ -162,11 +191,14 @@ export async function loadSleepData(range = 'week') {
     const res = await apiFetch('/api/sleep?range=' + range);
     const data = await res.json();
     
-    const bars = document.querySelectorAll('.chart-bar');
-    const vals = document.querySelectorAll('.chart-value');
-    const containers = document.querySelectorAll('.chart-bar-container');
+    const bars = document.querySelectorAll('#sleep-chart .chart-bar');
+    const vals = document.querySelectorAll('#sleep-chart .chart-value');
+    const containers = document.querySelectorAll('#sleep-chart .chart-bar-container');
+    const emptyState = document.getElementById('chart-empty-state');
+    const rangeLabel = document.getElementById('chart-range-label');
+    const rangeText = { today: 'Hôm nay', week: '7 ngày gần nhất', month: '30 ngày gần nhất' };
+    if (rangeLabel) rangeLabel.textContent = rangeText[range] || rangeText.week;
 
-    // Reset toàn bộ biểu đồ về trạng thái trống trước khi nạp dữ liệu thật
     bars.forEach(bar => {
       bar.style.height = '10%';
       bar.style.background = 'var(--border)';
@@ -177,30 +209,65 @@ export async function loadSleepData(range = 'week') {
       val.style.color = 'var(--text-secondary)';
       val.style.fontWeight = '600';
     });
-    containers.forEach(container => container.classList.remove('active'));
+    containers.forEach(container => {
+      container.classList.remove('active');
+      const dayLabel = container.querySelector('.chart-label');
+      if (dayLabel) dayLabel.textContent = '--';
+    });
 
-    if (!data || data.length === 0) return;
+    if (!data || data.length === 0) {
+      emptyState?.classList.add('visible');
+      setText('#analytics-avg', '--');
+      setText('#analytics-change', '--');
+      setText('#analytics-latency', '--');
+      setText('#analytics-quality', '--');
+      setText('#analytics-screen .ai-card h4', 'Chưa có dữ liệu');
+      setText('#analytics-screen .ai-card p', 'Hãy ghi nhận giấc ngủ đầu tiên để AuraSleep tạo phân tích từ dữ liệu thật của bạn.');
+      return;
+    }
 
-    // Lấy tối đa 7 bản ghi gần nhất để hiển thị lên biểu đồ 7 cột
+    emptyState?.classList.remove('visible');
     const displayData = data.slice(-7);
+    const maxMinutes = Math.max(540, ...displayData.map(record => Number(record.totalSleepMin) || 0));
     
     displayData.forEach((record, index) => {
-      if (bars[index]) {
-        const hours = (record.totalSleepMin / 60);
-        // Giả sử 9 tiếng là 100% chiều cao biểu đồ
-        const heightPercent = Math.max(10, Math.min(100, (hours / 9) * 100));
-        bars[index].style.height = heightPercent + '%';
-        
-        if (vals[index]) vals[index].textContent = hours.toFixed(1) + 'h';
-        
-        // Cập nhật nhãn ngày nếu có
-        const dayLabel = containers[index]?.querySelector('span:last-child');
-        if (dayLabel && record.date) {
-          const d = new Date(record.date);
-          dayLabel.textContent = d.getDate() + '/' + (d.getMonth() + 1);
-        }
+      if (!bars[index]) return;
+      const minutes = Number(record.totalSleepMin) || 0;
+      const hours = minutes / 60;
+      const heightPercent = Math.max(12, Math.min(100, (minutes / maxMinutes) * 100));
+      bars[index].style.height = heightPercent + '%';
+      
+      if (vals[index]) vals[index].textContent = hours.toFixed(1) + 'h';
+      
+      const dayLabel = containers[index]?.querySelector('.chart-label');
+      if (dayLabel && record.date) {
+        dayLabel.textContent = formatDateOnly(record.date).slice(0, 5);
       }
     });
+
+    const avgSleep = Math.round(average(data, 'totalSleepMin'));
+    const avgLatency = Math.round(average(data, 'fallAsleepMin'));
+    const avgQuality = Math.round(average(data, 'sleepScore'));
+    const midpoint = Math.floor(data.length / 2);
+    const previousRecords = data.slice(0, midpoint);
+    const currentRecords = data.slice(midpoint);
+    const currentAvg = average(currentRecords, 'totalSleepMin');
+    const previousAvg = average(previousRecords, 'totalSleepMin');
+    const changeText = data.length > 1 ? formatPercentChange(currentAvg, previousAvg) : '--';
+    const changeEl = document.getElementById('analytics-change');
+
+    setText('#analytics-avg', formatSleepDuration(avgSleep));
+    setText('#analytics-change', changeText);
+    setText('#analytics-latency', `${avgLatency} phút`);
+    setText('#analytics-quality', `${avgQuality}/100`);
+    if (changeEl) changeEl.style.color = changeText.startsWith('-') ? '#ef4444' : '#10b981';
+
+    const trendTitle = avgQuality >= 85 ? 'Giấc ngủ đang ổn định' : 'Cần cải thiện nhẹ';
+    const trendCopy = avgQuality >= 85
+      ? `Trung bình ${formatSleepDuration(avgSleep)}, chất lượng ${avgQuality}/100. Hãy giữ khung giờ ngủ hiện tại.`
+      : `Trung bình ${formatSleepDuration(avgSleep)}, chất lượng ${avgQuality}/100. Hãy thử giảm ánh sáng mạnh và bắt đầu routine sớm hơn.`;
+    setText('#analytics-screen .ai-card h4', trendTitle);
+    setText('#analytics-screen .ai-card p', trendCopy);
 
     const activeIndex = displayData.length - 1;
     if (containers[activeIndex]) selectBar(containers[activeIndex]);
@@ -212,7 +279,7 @@ export async function loadSleepData(range = 'week') {
 window.loadSleepData = loadSleepData;
 
 export function selectBar(element) {
-  const containers = document.querySelectorAll('.chart-bar-container');
+  const containers = document.querySelectorAll('#sleep-chart .chart-bar-container');
   containers.forEach(c => {
     c.classList.remove('active');
     const bar = c.querySelector('.chart-bar');

@@ -189,7 +189,7 @@ export function navigateTo(screenId, navElement = null) {
     navItems.forEach(item => item.classList.remove('active'));
     navElement.classList.add('active');
   } else {
-    const navMapping = { 'dashboard': 0, 'device': 1, 'analytics': 2, 'store': 3, 'profile': 4 };
+    const navMapping = { 'device': 0, 'analytics': 1, 'dashboard': 2, 'store': 3, 'profile': 4 };
     if (navMapping[screenId] !== undefined) {
       const navItems = document.querySelectorAll('.nav-item');
       navItems.forEach(item => item.classList.remove('active'));
