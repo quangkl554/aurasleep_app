@@ -2,9 +2,109 @@ import { apiFetch } from './api.js';
 
 const sleepDataCache = new Map();
 const SLEEP_CACHE_TTL_MS = 30000;
-const TARGET_SLEEP_MIN = 480;
-const GOOD_SLEEP_MIN = 420;
+let sleepProfile = {
+  targetSleepMin: 480,
+  preferredBedtime: '22:30',
+  preferredWakeTime: '06:30',
+  chronotype: 'balanced',
+  caffeineCutoff: '14:00',
+  screenCutoffMin: 60,
+  relaxReminderMin: 30
+};
+let TARGET_SLEEP_MIN = sleepProfile.targetSleepMin;
+let GOOD_SLEEP_MIN = Math.max(300, sleepProfile.targetSleepMin - 60);
 const GOOD_LATENCY_MIN = 20;
+const factorLabels = {
+  stress: 'Stress',
+  caffeine: 'Caffeine',
+  exercise: 'Tập thể dục',
+  screen: 'Màn hình khuya',
+  nap: 'Ngủ trưa',
+  alcohol: 'Rượu bia',
+  lateMeal: 'Ăn muộn',
+  meditation: 'Thiền'
+};
+
+export async function loadSleepProfile() {
+  try {
+    const res = await apiFetch('/api/auth/profile');
+    if (!res.ok) return sleepProfile;
+    const profile = await res.json();
+    sleepProfile = { ...sleepProfile, ...profile };
+    TARGET_SLEEP_MIN = Number(sleepProfile.targetSleepMin) || 480;
+    GOOD_SLEEP_MIN = Math.max(300, TARGET_SLEEP_MIN - 60);
+    updateSleepProfileUi();
+  } catch (err) {
+    console.warn('Không thể tải hồ sơ giấc ngủ:', err.message);
+  }
+  return sleepProfile;
+}
+
+export async function saveSleepProfile(event) {
+  event?.preventDefault();
+  const form = document.getElementById('sleep-profile-form');
+  if (!form) return;
+
+  const payload = {
+    targetSleepMin: Number(form.elements.targetSleepMin.value),
+    preferredBedtime: form.elements.preferredBedtime.value,
+    preferredWakeTime: form.elements.preferredWakeTime.value,
+    chronotype: form.elements.chronotype.value,
+    caffeineCutoff: form.elements.caffeineCutoff.value,
+    screenCutoffMin: Number(form.elements.screenCutoffMin.value),
+    relaxReminderMin: Number(form.elements.relaxReminderMin.value)
+  };
+
+  const submitButton = form.querySelector('button[type="submit"]');
+  const originalText = submitButton?.textContent;
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = 'Đang lưu...';
+  }
+
+  try {
+    const res = await apiFetch('/api/auth/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Không thể lưu hồ sơ giấc ngủ');
+    sleepProfile = { ...sleepProfile, ...(await res.json()) };
+    TARGET_SLEEP_MIN = Number(sleepProfile.targetSleepMin) || 480;
+    GOOD_SLEEP_MIN = Math.max(300, TARGET_SLEEP_MIN - 60);
+    updateSleepProfileUi();
+    sleepDataCache.clear();
+    await loadDashboardData();
+    await loadSleepData(document.querySelector('#analytics-tabs .auth-tab.active')?.dataset.tab || 'week');
+    alert('Đã lưu hồ sơ giấc ngủ.');
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = originalText;
+    }
+  }
+}
+
+function updateSleepProfileUi() {
+  const form = document.getElementById('sleep-profile-form');
+  if (form) {
+    form.elements.targetSleepMin.value = sleepProfile.targetSleepMin || 480;
+    form.elements.preferredBedtime.value = sleepProfile.preferredBedtime || '22:30';
+    form.elements.preferredWakeTime.value = sleepProfile.preferredWakeTime || '06:30';
+    form.elements.chronotype.value = sleepProfile.chronotype || 'balanced';
+    form.elements.caffeineCutoff.value = sleepProfile.caffeineCutoff || '14:00';
+    form.elements.screenCutoffMin.value = sleepProfile.screenCutoffMin ?? 60;
+    form.elements.relaxReminderMin.value = sleepProfile.relaxReminderMin ?? 30;
+  }
+
+  setText('#profile-target-sleep', formatSleepDuration(TARGET_SLEEP_MIN));
+  setText('#profile-bedtime', sleepProfile.preferredBedtime || '22:30');
+  setText('#profile-wake-time', sleepProfile.preferredWakeTime || '06:30');
+}
+
+window.saveSleepProfile = saveSleepProfile;
 
 export function getTodayDateString() {
   const now = new Date();
@@ -27,7 +127,7 @@ export function calculateSleepMetrics({ date, bedtime, wakeTime, fallAsleepMin }
   const safeFallAsleepMin = Math.max(0, Number(fallAsleepMin) || 0);
   const totalSleepMin = Math.max(0, inBedMin - safeFallAsleepMin);
   const efficiency = inBedMin > 0 ? Math.max(0, Math.min(100, Math.round((totalSleepMin / inBedMin) * 100))) : 0;
-  const durationScore = Math.max(0, 100 - Math.abs(totalSleepMin - 480) / 480 * 45);
+  const durationScore = Math.max(0, 100 - Math.abs(totalSleepMin - TARGET_SLEEP_MIN) / TARGET_SLEEP_MIN * 45);
   const latencyPenalty = Math.min(20, Math.max(0, safeFallAsleepMin - 15) * 0.6);
   const sleepScore = Math.max(0, Math.min(100, Math.round(durationScore * 0.65 + efficiency * 0.35 - latencyPenalty)));
 
@@ -53,8 +153,8 @@ export function openSleepEntryModal() {
   if (!overlay || !form) return;
   form.reset();
   form.elements.date.value = getTodayDateString();
-  form.elements.bedtime.value = '22:30';
-  form.elements.wakeTime.value = '06:30';
+  form.elements.bedtime.value = sleepProfile.preferredBedtime || '22:30';
+  form.elements.wakeTime.value = sleepProfile.preferredWakeTime || '06:30';
   form.elements.fallAsleepMin.value = '15';
   overlay.classList.add('active');
   overlay.setAttribute('aria-hidden', 'false');
@@ -79,6 +179,7 @@ export async function submitSleepEntry(event) {
   const wakeTime = form.elements.wakeTime.value;
   const fallAsleepMin = Number(form.elements.fallAsleepMin.value);
   const notes = form.elements.notes.value.trim();
+  const factors = Array.from(form.querySelectorAll('[name="factors"]:checked')).map(input => input.value);
 
   if (!date || !bedtime || !wakeTime) {
     alert('Vui lòng nhập đầy đủ ngày ngủ, giờ đi ngủ và giờ thức dậy.');
@@ -94,7 +195,7 @@ export async function submitSleepEntry(event) {
     const res = await apiFetch('/api/sleep', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date, ...metrics, notes })
+      body: JSON.stringify({ date, ...metrics, factors, notes })
     });
 
     if (!res.ok) throw new Error('Không thể lưu dữ liệu');
@@ -221,6 +322,55 @@ function updateInsightPanel(records) {
     '#insight-streak-copy',
     streak >= 3 ? 'Đang tạo được nhịp ngủ ổn định.' : 'Cần thêm vài ngày đạt mục tiêu liên tiếp.'
   );
+}
+
+function renderReportList(selector, items, emptyText) {
+  const list = document.querySelector(selector);
+  if (!list) return;
+  list.innerHTML = '';
+
+  if (!items || !items.length) {
+    const item = document.createElement('li');
+    item.textContent = emptyText;
+    list.appendChild(item);
+    return;
+  }
+
+  items.forEach(text => {
+    const item = document.createElement('li');
+    item.textContent = text;
+    list.appendChild(item);
+  });
+}
+
+async function loadSleepReport(range, selectedDate) {
+  const panel = document.getElementById('sleep-report-panel');
+  if (!panel) return;
+
+  try {
+    const res = await apiFetch(`/api/sleep/report?range=${range === 'month' ? 'month' : 'week'}&date=${encodeURIComponent(selectedDate)}`);
+    if (!res.ok) throw new Error('Không thể tải báo cáo');
+    const report = await res.json();
+
+    setText('#report-sleep-debt', formatSleepDuration(report.sleepDebt || 0));
+    setText('#report-consistency', `${report.consistencyScore || 0}/100`);
+    setText('#report-goal-rate', `${report.goalRate || 0}%`);
+    setText('#report-record-count', `${report.recordCount || 0} bản ghi`);
+    setText('#report-best-night', report.bestNight?.date ? `${formatDateOnly(report.bestNight.date)} · ${report.bestNight.sleepScore}/100` : '--');
+    setText('#report-worst-night', report.worstNight?.date ? `${formatDateOnly(report.worstNight.date)} · ${report.worstNight.sleepScore}/100` : '--');
+
+    const factorTexts = (report.factorInsights || []).slice(0, 3).map(item => {
+      const label = factorLabels[item.factor] || item.factor;
+      const sign = item.impact > 0 ? '+' : '';
+      return `${label}: ${sign}${item.impact} điểm, xuất hiện ${item.count} lần`;
+    });
+    renderReportList('#report-factor-list', factorTexts, 'Chưa đủ dữ liệu yếu tố ảnh hưởng.');
+    renderReportList('#report-recommendations', report.recommendations, 'Duy trì lịch ngủ hiện tại và ghi thêm dữ liệu.');
+    panel.classList.add('active');
+  } catch (err) {
+    console.warn(err.message);
+    panel.classList.remove('active');
+  }
 }
 
 function toDate(value) {
@@ -361,7 +511,7 @@ function updateDayRings(record, isVisible) {
   const efficiency = Number(record.efficiency) || 0;
   const latency = Number(record.fallAsleepMin) || 0;
   const score = Number(record.sleepScore) || 0;
-  const durationPercent = Math.max(0, Math.min(100, (totalSleepMin / 480) * 100));
+  const durationPercent = Math.max(0, Math.min(100, (totalSleepMin / TARGET_SLEEP_MIN) * 100));
   const latencyPercent = Math.max(0, Math.min(100, 100 - (latency / 45) * 75));
 
   setRing('[data-ring="duration"]', durationPercent, formatSleepDuration(totalSleepMin));
@@ -379,7 +529,7 @@ export function getRhythmLabel(record) {
 
 export function getDashboardSuggestion(record) {
   if (!record) return 'Hãy ghi nhận giấc ngủ đầu tiên để AuraBot phân tích.';
-  if ((record.totalSleepMin || 0) < 420) return 'Thời gian ngủ còn thấp. Hãy đi ngủ sớm hơn tối nay.';
+  if ((record.totalSleepMin || 0) < GOOD_SLEEP_MIN) return 'Thời gian ngủ còn thấp. Hãy đi ngủ sớm hơn tối nay.';
   return 'Giấc ngủ đang ở mức tốt. Hãy duy trì thói quen này.';
 }
 
@@ -473,13 +623,14 @@ export async function loadSleepData(range = 'week') {
       setStatCard('analytics-latency', 'Chìm giấc', '--', 'Chưa có dữ liệu');
       setStatCard('analytics-quality', 'Chất lượng', '--', 'Chưa có dữ liệu');
       setText('#insight-sleep-debt', '--');
-      setText('#insight-sleep-debt-copy', 'So với mục tiêu 8h mỗi đêm.');
+      setText('#insight-sleep-debt-copy', `So với mục tiêu ${formatSleepDuration(TARGET_SLEEP_MIN)} mỗi đêm.`);
       setText('#insight-consistency', '--');
       setText('#insight-consistency-copy', 'Dựa trên độ lệch giờ đi ngủ.');
       setText('#insight-streak', '--');
-      setText('#insight-streak-copy', 'Số bản ghi liên tiếp đạt từ 7h.');
+      setText('#insight-streak-copy', `Số bản ghi liên tiếp đạt từ ${formatSleepDuration(GOOD_SLEEP_MIN)}.`);
       setText('#analytics-screen .ai-card h4', rangeCopy.noDataTitle);
       setText('#analytics-screen .ai-card p', rangeCopy.empty);
+      document.getElementById('sleep-report-panel')?.classList.remove('active');
       return;
     }
 
@@ -527,7 +678,7 @@ export async function loadSleepData(range = 'week') {
 
     if (range === 'today') {
       const delta = latestSleep - TARGET_SLEEP_MIN;
-      setStatCard('analytics-avg', 'Ngủ thực tế', formatSleepDuration(latestSleep), 'Mục tiêu 8h mỗi đêm', 'var(--accent-primary)');
+      setStatCard('analytics-avg', 'Ngủ thực tế', formatSleepDuration(latestSleep), `Mục tiêu ${formatSleepDuration(TARGET_SLEEP_MIN)} mỗi đêm`, 'var(--accent-primary)');
       setStatCard(
         'analytics-change',
         'So với mục tiêu',
@@ -539,12 +690,13 @@ export async function loadSleepData(range = 'week') {
       setStatCard('analytics-quality', 'Hiệu suất', `${latestEfficiency}%`, `Điểm ngủ ${latestScore}/100`);
     } else {
       setStatCard('analytics-avg', 'TB mỗi ngày', formatSleepDuration(avgSleep), `${data.length} bản ghi trong kỳ`, 'var(--accent-primary)');
-      setStatCard('analytics-change', 'Đạt mục tiêu', `${goalRate}%`, `${daysAtGoal}/${data.length} ngày ngủ từ 7h trở lên`, goalRate >= 70 ? '#10b981' : '#ef4444');
+      setStatCard('analytics-change', 'Đạt mục tiêu', `${goalRate}%`, `${daysAtGoal}/${data.length} ngày đạt mục tiêu`, goalRate >= 70 ? '#10b981' : '#ef4444');
       setStatCard('analytics-latency', 'Chìm giấc TB', `${avgLatency} phút`, getLatencyMeta(avgLatency));
       setStatCard('analytics-quality', 'Chất lượng TB', `${avgQuality}/100`, `Hiệu suất TB ${avgEfficiency}%`);
     }
     if (changeEl && range !== 'today') changeEl.style.color = goalRate >= 70 ? '#10b981' : '#ef4444';
     updateInsightPanel(data);
+    await loadSleepReport(range, selectedDate);
 
     const trendTitle = avgQuality >= 85 ? 'Giấc ngủ đang ổn định' : 'Cần cải thiện nhẹ';
     const trendPrefix = range === 'today' ? 'Ngày đã chọn' : range === 'month' ? 'Tháng này' : 'Tuần này';

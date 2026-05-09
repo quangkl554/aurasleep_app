@@ -1,4 +1,4 @@
-import { getToken } from './api.js';
+import { apiFetch, clearSession, getToken } from './api.js';
 import { isAudioSessionActive, stopActiveSound } from './device.js';
 
 let appAlertCloseHandler = null;
@@ -182,6 +182,16 @@ export function openProfileInfo(type) {
     list.appendChild(item);
   });
 
+  if (type === 'security') {
+    const actions = document.createElement('div');
+    actions.className = 'profile-info-actions';
+    actions.innerHTML = `
+      <button type="button" class="app-alert-button app-prompt-primary" onclick="exportAccountData()">Xuất dữ liệu</button>
+      <button type="button" class="app-prompt-secondary danger" onclick="deleteAccountData()">Xóa tài khoản</button>
+    `;
+    list.appendChild(actions);
+  }
+
   overlay.classList.add('active');
   overlay.setAttribute('aria-hidden', 'false');
 }
@@ -195,6 +205,40 @@ export function closeProfileInfo() {
 
 window.openProfileInfo = openProfileInfo;
 window.closeProfileInfo = closeProfileInfo;
+
+export async function exportAccountData() {
+  try {
+    const res = await apiFetch('/api/auth/export');
+    if (!res.ok) throw new Error('Không thể xuất dữ liệu');
+    const data = await res.json();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `aurasleep-export-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+export async function deleteAccountData() {
+  const ok = await showAppConfirm('Hành động này sẽ xóa tài khoản và dữ liệu liên quan. Bạn có chắc chắn không?', 'Xóa tài khoản');
+  if (!ok) return;
+  try {
+    const res = await apiFetch('/api/auth/account', { method: 'DELETE' });
+    if (!res.ok) throw new Error('Không thể xóa tài khoản');
+    clearSession();
+    closeProfileInfo();
+    navigateTo('login');
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+window.exportAccountData = exportAccountData;
+window.deleteAccountData = deleteAccountData;
 
 export function toggleTheme() {
   const htmlEl = document.documentElement;

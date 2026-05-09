@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const { Device } = require('../models');
+const { Device, DeviceCommandHistory } = require('../models');
 const { trackActivity, trackDeviceCommand } = require('../utils/tracking');
 
 router.get('/', auth, async (req, res) => {
@@ -35,6 +35,20 @@ router.get('/', auth, async (req, res) => {
         res.json(devices);
     } catch (err) {
         console.error('Device list error:', err.message);
+        res.status(500).json({ message: 'Loi Server' });
+    }
+});
+
+router.get('/history', auth, async (req, res) => {
+    try {
+        const commands = await DeviceCommandHistory.findAll({
+            where: { userId: req.user.id },
+            order: [['created_at', 'DESC']],
+            limit: 30
+        });
+        res.json(commands);
+    } catch (err) {
+        console.error('Device history error:', err.message);
         res.status(500).json({ message: 'Loi Server' });
     }
 });

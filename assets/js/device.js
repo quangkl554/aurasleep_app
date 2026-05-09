@@ -126,6 +126,7 @@ export async function fetchDeviceData() {
       });
       setActiveSoundUi(dev.activeSound);
     }
+    await fetchDeviceHistory();
   } catch (e) { console.error(e); }
 }
 
@@ -179,11 +180,152 @@ export async function fetchRoutines() {
   try {
     const res = await apiFetch('/api/routines');
     const routines = await res.json();
-    // Update UI
+    renderSavedRoutines(Array.isArray(routines) ? routines : []);
   } catch (e) { console.error(e); }
 }
 
 window.fetchRoutines = fetchRoutines;
+
+function formatRepeatDays(value) {
+  const labels = { mon: 'T2', tue: 'T3', wed: 'T4', thu: 'T5', fri: 'T6', sat: 'T7', sun: 'CN' };
+  return String(value || '').split(',').filter(Boolean).map(day => labels[day] || day).join(', ') || 'Chưa đặt lịch';
+}
+
+function renderSavedRoutines(routines) {
+  const list = document.getElementById('routine-saved-list');
+  if (!list) return;
+  list.innerHTML = '';
+
+  if (!routines.length) {
+    list.innerHTML = '<div class="routine-empty">Chưa có routine đã lưu. Tạo routine đầu tiên để AuraSleep nhắc bạn đúng lịch.</div>';
+    return;
+  }
+
+  routines.forEach(routine => {
+    const firstStep = [...(routine.steps || [])].sort((a, b) => a.stepOrder - b.stepOrder)[0];
+    const card = document.createElement('div');
+    card.className = 'routine-saved-card';
+    card.innerHTML = `
+      <div>
+        <strong></strong>
+        <p></p>
+      </div>
+      <button type="button" class="routine-toggle-btn"></button>
+    `;
+    card.querySelector('strong').textContent = routine.name || 'Routine thư giãn';
+    card.querySelector('p').textContent = `${firstStep?.time || '--:--'} · ${formatRepeatDays(routine.repeatDays)} · ${(routine.steps || []).length} bước`;
+    const toggle = card.querySelector('button');
+    toggle.textContent = routine.isActive ? 'Đang bật' : 'Đã tắt';
+    toggle.classList.toggle('active', Boolean(routine.isActive));
+    toggle.addEventListener('click', () => toggleRoutineActive(routine, toggle));
+    list.appendChild(card);
+  });
+}
+
+async function toggleRoutineActive(routine, button) {
+  const nextActive = !routine.isActive;
+  button.disabled = true;
+  try {
+    const res = await apiFetch(`/api/routines/${routine.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isActive: nextActive })
+    });
+    if (!res.ok) throw new Error('Không thể cập nhật routine');
+    await fetchRoutines();
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+export async function saveRoutineBuilder(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const selectedSound = document.querySelector('.routine-sound-option.active')?.dataset.routineSound || 'rain';
+  const soundName = document.querySelector('.routine-sound-option.active span')?.textContent || 'Mưa rào';
+  const repeatDays = Array.from(form.querySelectorAll('[name="repeatDays"]:checked')).map(input => input.value);
+  const startTime = form.elements.startTime.value || '22:00';
+  const sleepTime = form.elements.sleepTime.value || '22:30';
+  const wakeTime = form.elements.wakeTime.value || '06:30';
+  const payload = {
+    name: form.elements.name.value.trim() || 'Routine thư giãn',
+    repeatDays,
+    sound: selectedSound,
+    steps: [
+      {
+        time: startTime,
+        action: 'sound',
+        label: 'Bắt đầu thư giãn',
+        sound: selectedSound,
+        soundVolume: 35,
+        lightIntensity: 30,
+        colorTemp: 3000,
+        description: `Phát ${soundName}, giảm ánh sáng và chuẩn bị ngủ.`
+      },
+      {
+        time: sleepTime,
+        action: 'breathing',
+        label: 'Đi vào giấc ngủ',
+        description: 'Thở chậm và giữ âm nền nhẹ trong 45 phút.'
+      },
+      {
+        time: wakeTime,
+        action: 'wake',
+        label: 'Báo thức bình minh',
+        lightIntensity: 70,
+        colorTemp: 4200,
+        description: 'Tăng sáng dần để thức dậy tự nhiên hơn.'
+      }
+    ]
+  };
+
+  const button = form.querySelector('button[type="submit"]');
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Đang lưu...';
+
+  try {
+    const res = await apiFetch('/api/routines', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || 'Không thể lưu routine');
+    await fetchRoutines();
+    alert('Đã lưu routine.');
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = originalText;
+  }
+}
+
+window.saveRoutineBuilder = saveRoutineBuilder;
+
+async function fetchDeviceHistory() {
+  const list = document.getElementById('device-history-list');
+  if (!list) return;
+  try {
+    const res = await apiFetch('/api/devices/history');
+    if (!res.ok) return;
+    const commands = await res.json();
+    list.innerHTML = '';
+    commands.slice(0, 5).forEach(command => {
+      const item = document.createElement('div');
+      item.className = 'device-history-item';
+      item.innerHTML = '<span></span><strong></strong>';
+      item.querySelector('span').textContent = new Date(command.createdAt || command.created_at).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+      item.querySelector('strong').textContent = command.command;
+      list.appendChild(item);
+    });
+  } catch (err) {
+    console.warn('Không thể tải lịch sử thiết bị:', err.message);
+  }
+}
 
 export async function activateRoutine(btn) {
   if (btn.classList.contains('routine-active')) {

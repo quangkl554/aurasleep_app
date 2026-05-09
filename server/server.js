@@ -85,13 +85,14 @@ process.on('uncaughtException', (err) => {
     console.error('Uncaught Exception:', err);
 });
 
-const dbReady = isProduction
-    ? sequelize.authenticate()
-    : sequelize.sync(process.env.DB_SYNC === 'true' ? { alter: true } : {});
+const shouldSync = process.env.DB_SYNC === 'true';
+const dbReady = shouldSync
+    ? sequelize.sync({ alter: true })
+    : (isProduction ? sequelize.authenticate() : sequelize.sync({}));
 
 dbReady
     .then(() => {
-        console.log(isProduction ? 'Database connection verified.' : 'Database models synced successfully.');
+        console.log(shouldSync ? 'Database models synced successfully.' : 'Database connection verified.');
         app.listen(PORT, () => {
             console.log(`Server is running on port ${PORT}`);
         });

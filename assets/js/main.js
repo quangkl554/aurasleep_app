@@ -1,7 +1,7 @@
 import { apiFetch, getToken } from './api.js';
 import { navigateTo, hideSplash, toggleTheme } from './ui.js';
 import { fetchUserInfo, initRememberedLogin } from './auth.js';
-import { getTodayDateString, loadDashboardData, loadSleepData } from './sleep.js';
+import { getTodayDateString, loadDashboardData, loadSleepData, loadSleepProfile } from './sleep.js';
 import { fetchDeviceData, fetchRoutines, initDeviceControls, initSoundGrid } from './device.js';
 import './chat.js';
 
@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (token) {
     const isValid = await fetchUserInfo(token);
     if (isValid) {
+      await loadSleepProfile();
       navigateTo('dashboard');
       hideSplash(0);
     } else {

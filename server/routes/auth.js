@@ -3,9 +3,22 @@ const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { Op } = require('sequelize');
-const { User } = require('../models');
+const {
+    User,
+    SleepProfile,
+    Notification,
+    Subscription,
+    SleepRecord,
+    SleepRoutine,
+    RoutineStep,
+    Device,
+    DeviceCommandHistory,
+    ChatSession,
+    ChatMessage
+} = require('../models');
 const auth = require('../middleware/auth');
 const { trackActivity, trackSession } = require('../utils/tracking');
+const { createNotification } = require('../utils/notifications');
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const vietnamPhonePattern = /^(0|\+84)(\d{9}|\d{10})$/;
@@ -30,7 +43,9 @@ function publicUser(user) {
         avatarUrl: user.avatarUrl,
         role: user.role,
         theme: user.theme,
-        notifications: user.notifications
+        notifications: user.notifications,
+        sleepProfile: user.sleepProfile || null,
+        subscription: user.Subscriptions?.[0] || null
     };
 }
 
@@ -82,6 +97,20 @@ router.post('/register', async (req, res) => {
             phone: normalizedPhone
         });
 
+        await SleepProfile.create({ userId: user.id });
+        await Subscription.create({
+            userId: user.id,
+            plan: 'free',
+            status: 'active',
+            startDate: new Date()
+        });
+        await createNotification({
+            userId: user.id,
+            title: 'Chào mừng đến với AuraSleep',
+            message: 'Tài khoản của bạn đã sẵn sàng. Hãy ghi nhận giấc ngủ đầu tiên để AuraSleep bắt đầu phân tích bằng dữ liệu thật.',
+            type: 'welcome'
+        });
+
         await trackSession(req, { userId: user.id, authEvent: 'register' });
         await trackActivity(req, {
             userId: user.id,
@@ -91,7 +120,14 @@ router.post('/register', async (req, res) => {
             metadata: { authProvider: 'local' }
         });
 
-        res.json({ token: signToken(user.id), user: publicUser(user) });
+        const createdUser = await User.findByPk(user.id, {
+            include: [
+                { model: SleepProfile, as: 'sleepProfile' },
+                { model: Subscription, separate: true, limit: 1, order: [['created_at', 'DESC']] }
+            ]
+        });
+
+        res.json({ token: signToken(user.id), user: publicUser(createdUser || user) });
     } catch (err) {
         console.error('Register error:', err.message);
         if (err.name === 'SequelizeUniqueConstraintError') {
@@ -117,7 +153,13 @@ router.post('/login', async (req, res) => {
             ? { email: normalizedEmail }
             : { phone: normalizedIdentifier };
 
-        const user = await User.findOne({ where });
+        const user = await User.findOne({
+            where,
+            include: [
+                { model: SleepProfile, as: 'sleepProfile' },
+                { model: Subscription, separate: true, limit: 1, order: [['created_at', 'DESC']] }
+            ]
+        });
         if (!user) {
             return res.status(400).json({ message: 'Thong tin dang nhap khong hop le' });
         }
@@ -146,7 +188,11 @@ router.post('/login', async (req, res) => {
 router.get('/me', auth, async (req, res) => {
     try {
         const user = await User.findByPk(req.user.id, {
-            attributes: { exclude: ['passwordHash'] }
+            attributes: { exclude: ['passwordHash'] },
+            include: [
+                { model: SleepProfile, as: 'sleepProfile' },
+                { model: Subscription, separate: true, limit: 1, order: [['created_at', 'DESC']] }
+            ]
         });
 
         if (!user) {
@@ -156,6 +202,152 @@ router.get('/me', auth, async (req, res) => {
         res.json(user);
     } catch (err) {
         console.error('Me error:', err.message);
+        res.status(500).json({ message: 'Loi Server' });
+    }
+});
+
+router.get('/profile', auth, async (req, res) => {
+    try {
+        const [profile] = await SleepProfile.findOrCreate({
+            where: { userId: req.user.id },
+            defaults: { userId: req.user.id }
+        });
+
+        res.json(profile);
+    } catch (err) {
+        console.error('Profile get error:', err.message);
+        res.status(500).json({ message: 'Loi Server' });
+    }
+});
+
+router.put('/profile', auth, async (req, res) => {
+    try {
+        const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+        const allowedChronotypes = new Set(['morning', 'balanced', 'night']);
+        const payload = {};
+
+        if (Number.isInteger(req.body.targetSleepMin) && req.body.targetSleepMin >= 300 && req.body.targetSleepMin <= 600) {
+            payload.targetSleepMin = req.body.targetSleepMin;
+        }
+        if (typeof req.body.preferredBedtime === 'string' && timePattern.test(req.body.preferredBedtime)) {
+            payload.preferredBedtime = req.body.preferredBedtime;
+        }
+        if (typeof req.body.preferredWakeTime === 'string' && timePattern.test(req.body.preferredWakeTime)) {
+            payload.preferredWakeTime = req.body.preferredWakeTime;
+        }
+        if (typeof req.body.chronotype === 'string' && allowedChronotypes.has(req.body.chronotype)) {
+            payload.chronotype = req.body.chronotype;
+        }
+        if (typeof req.body.caffeineCutoff === 'string' && timePattern.test(req.body.caffeineCutoff)) {
+            payload.caffeineCutoff = req.body.caffeineCutoff;
+        }
+        if (Number.isInteger(req.body.screenCutoffMin) && req.body.screenCutoffMin >= 0 && req.body.screenCutoffMin <= 180) {
+            payload.screenCutoffMin = req.body.screenCutoffMin;
+        }
+        if (Number.isInteger(req.body.relaxReminderMin) && req.body.relaxReminderMin >= 0 && req.body.relaxReminderMin <= 120) {
+            payload.relaxReminderMin = req.body.relaxReminderMin;
+        }
+
+        const [profile] = await SleepProfile.findOrCreate({
+            where: { userId: req.user.id },
+            defaults: { userId: req.user.id }
+        });
+        await profile.update(payload);
+
+        await trackActivity(req, {
+            userId: req.user.id,
+            eventType: 'sleep_profile_updated',
+            entityType: 'sleep_profile',
+            entityId: profile.id,
+            metadata: payload
+        });
+
+        res.json(profile);
+    } catch (err) {
+        console.error('Profile update error:', err.message);
+        res.status(500).json({ message: 'Loi Server' });
+    }
+});
+
+router.get('/notifications', auth, async (req, res) => {
+    try {
+        const notifications = await Notification.findAll({
+            where: { userId: req.user.id },
+            order: [['created_at', 'DESC']],
+            limit: 80
+        });
+        res.json(notifications);
+    } catch (err) {
+        console.error('Notifications get error:', err.message);
+        res.status(500).json({ message: 'Loi Server' });
+    }
+});
+
+router.put('/notifications/:id/read', auth, async (req, res) => {
+    try {
+        const notification = await Notification.findOne({
+            where: { id: req.params.id, userId: req.user.id }
+        });
+
+        if (!notification) {
+            return res.status(404).json({ message: 'Khong tim thay thong bao' });
+        }
+
+        await notification.update({ readAt: notification.readAt || new Date() });
+        res.json(notification);
+    } catch (err) {
+        console.error('Notification read error:', err.message);
+        res.status(500).json({ message: 'Loi Server' });
+    }
+});
+
+router.get('/export', auth, async (req, res) => {
+    try {
+        const [
+            user,
+            sleepProfile,
+            sleepRecords,
+            routines,
+            devices,
+            deviceCommands,
+            notifications,
+            chatSessions
+        ] = await Promise.all([
+            User.findByPk(req.user.id, { attributes: { exclude: ['passwordHash'] } }),
+            SleepProfile.findOne({ where: { userId: req.user.id } }),
+            SleepRecord.findAll({ where: { userId: req.user.id }, order: [['date', 'ASC']] }),
+            SleepRoutine.findAll({ where: { userId: req.user.id }, include: [{ model: RoutineStep, as: 'steps' }] }),
+            Device.findAll({ where: { userId: req.user.id } }),
+            DeviceCommandHistory.findAll({ where: { userId: req.user.id }, order: [['created_at', 'DESC']] }),
+            Notification.findAll({ where: { userId: req.user.id }, order: [['created_at', 'DESC']] }),
+            ChatSession.findAll({ where: { userId: req.user.id }, include: [{ model: ChatMessage }] })
+        ]);
+
+        res.json({
+            exportedAt: new Date().toISOString(),
+            user,
+            sleepProfile,
+            sleepRecords,
+            routines,
+            devices,
+            deviceCommands,
+            notifications,
+            chatSessions
+        });
+    } catch (err) {
+        console.error('Export error:', err.message);
+        res.status(500).json({ message: 'Loi Server' });
+    }
+});
+
+router.delete('/account', auth, async (req, res) => {
+    try {
+        const user = await User.findByPk(req.user.id);
+        if (!user) return res.status(404).json({ message: 'Khong tim thay user' });
+        await user.destroy();
+        res.json({ message: 'Da xoa tai khoan va du lieu lien quan' });
+    } catch (err) {
+        console.error('Delete account error:', err.message);
         res.status(500).json({ message: 'Loi Server' });
     }
 });

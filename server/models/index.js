@@ -15,6 +15,8 @@ const UserActivityEvent = require('./UserActivityEvent');
 const UserSession = require('./UserSession');
 const DeviceCommandHistory = require('./DeviceCommandHistory');
 const PaymentEvent = require('./PaymentEvent');
+const SleepProfile = require('./SleepProfile');
+const Notification = require('./Notification');
 
 // Define Associations
 
@@ -26,13 +28,21 @@ Device.belongsTo(User, { foreignKey: 'userId' });
 User.hasMany(SleepRecord, { foreignKey: 'userId', onDelete: 'CASCADE' });
 SleepRecord.belongsTo(User, { foreignKey: 'userId' });
 
+// User -> SleepProfile (1 to 1)
+User.hasOne(SleepProfile, { foreignKey: 'userId', onDelete: 'CASCADE', as: 'sleepProfile' });
+SleepProfile.belongsTo(User, { foreignKey: 'userId' });
+
 // User -> SleepRoutine (1 to Many)
 User.hasMany(SleepRoutine, { foreignKey: 'userId', onDelete: 'CASCADE' });
 SleepRoutine.belongsTo(User, { foreignKey: 'userId' });
 
 // SleepRoutine -> RoutineStep (1 to Many)
-SleepRoutine.hasMany(RoutineStep, { foreignKey: 'routineId', onDelete: 'CASCADE' });
+SleepRoutine.hasMany(RoutineStep, { foreignKey: 'routineId', onDelete: 'CASCADE', as: 'steps' });
 RoutineStep.belongsTo(SleepRoutine, { foreignKey: 'routineId' });
+
+// User -> Notification (1 to Many)
+User.hasMany(Notification, { foreignKey: 'userId', onDelete: 'CASCADE' });
+Notification.belongsTo(User, { foreignKey: 'userId' });
 
 // User -> Subscription (1 to Many)
 User.hasMany(Subscription, { foreignKey: 'userId', onDelete: 'CASCADE' });
@@ -90,5 +100,7 @@ module.exports = {
     UserActivityEvent,
     UserSession,
     DeviceCommandHistory,
-    PaymentEvent
+    PaymentEvent,
+    SleepProfile,
+    Notification
 };

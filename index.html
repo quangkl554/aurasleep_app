@@ -211,6 +211,17 @@
         <input type="range" min="2700" max="6500" value="3200" id="temp-slider" style="background: linear-gradient(to right, #ff8c00, #fefcf3, #e0f2fe);">
       </div>
 
+      <div class="glass-panel device-history-card">
+        <div class="profile-card-header">
+          <div>
+            <span class="chart-kicker">Realtime giả lập</span>
+            <h3>Lịch sử lệnh thiết bị</h3>
+          </div>
+          <span class="premium-pill">Simulated</span>
+        </div>
+        <div id="device-history-list" class="device-history-list"></div>
+      </div>
+
       <div class="section-title">
         <h3>Âm thanh & Tần số</h3>
         <a href="#" onclick="alert('Tính năng mở rộng kho âm thanh đang phát triển!')">Xem tất cả</a>
@@ -412,6 +423,50 @@
         </div>
       </div>
 
+      <div class="glass-panel sleep-report-panel" id="sleep-report-panel">
+        <div class="report-header">
+          <div>
+            <span class="chart-kicker">Báo cáo thực tiễn</span>
+            <h3>Tổng hợp tuần/tháng</h3>
+          </div>
+          <span id="report-record-count">--</span>
+        </div>
+        <div class="report-metrics">
+          <div>
+            <span>Nợ ngủ</span>
+            <strong id="report-sleep-debt">--</strong>
+          </div>
+          <div>
+            <span>Đều lịch</span>
+            <strong id="report-consistency">--</strong>
+          </div>
+          <div>
+            <span>Đạt mục tiêu</span>
+            <strong id="report-goal-rate">--</strong>
+          </div>
+        </div>
+        <div class="report-night-row">
+          <div>
+            <span>Tốt nhất</span>
+            <strong id="report-best-night">--</strong>
+          </div>
+          <div>
+            <span>Cần chú ý</span>
+            <strong id="report-worst-night">--</strong>
+          </div>
+        </div>
+        <div class="report-columns">
+          <div>
+            <h4>Yếu tố ảnh hưởng</h4>
+            <ul id="report-factor-list"></ul>
+          </div>
+          <div>
+            <h4>Khuyến nghị</h4>
+            <ul id="report-recommendations"></ul>
+          </div>
+        </div>
+      </div>
+
       <div class="glass-panel ai-card mt-4">
         <div class="ai-icon" style="background: #10b981;"><i class="fa-solid fa-arrow-trend-up"></i></div>
         <div class="ai-text">
@@ -507,7 +562,64 @@
       <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 30px;">
         <div class="avatar" style="width: 80px; height: 80px; font-size: 32px; margin-bottom: 16px;">AS</div>
         <h2>AURASLEEP</h2>
-        <div style="background: rgba(244,162,97,0.2); color: var(--accent-primary); padding: 4px 12px; border-radius: 100px; font-size: 12px; font-weight: 600;">Premium Member</div>
+        <div id="profile-plan-badge" style="background: rgba(244,162,97,0.2); color: var(--accent-primary); padding: 4px 12px; border-radius: 100px; font-size: 12px; font-weight: 600;">Free Member</div>
+      </div>
+
+      <div class="glass-panel sleep-profile-card">
+        <div class="profile-card-header">
+          <div>
+            <span class="chart-kicker">Hồ sơ giấc ngủ</span>
+            <h3>Mục tiêu cá nhân</h3>
+          </div>
+          <div class="profile-mini-stats">
+            <span id="profile-target-sleep">8h 0m</span>
+            <small id="profile-bedtime">22:30</small>
+            <small id="profile-wake-time">06:30</small>
+          </div>
+        </div>
+        <form id="sleep-profile-form" class="sleep-profile-form" onsubmit="saveSleepProfile(event)">
+          <label>
+            <span>Mục tiêu ngủ</span>
+            <select class="form-input" name="targetSleepMin">
+              <option value="420">7 giờ</option>
+              <option value="450">7 giờ 30 phút</option>
+              <option value="480">8 giờ</option>
+              <option value="510">8 giờ 30 phút</option>
+              <option value="540">9 giờ</option>
+            </select>
+          </label>
+          <label>
+            <span>Giờ ngủ mong muốn</span>
+            <input class="form-input" type="time" name="preferredBedtime" value="22:30">
+          </label>
+          <label>
+            <span>Giờ thức dậy</span>
+            <input class="form-input" type="time" name="preferredWakeTime" value="06:30">
+          </label>
+          <label>
+            <span>Chronotype</span>
+            <select class="form-input" name="chronotype">
+              <option value="morning">Dễ dậy sớm</option>
+              <option value="balanced">Cân bằng</option>
+              <option value="night">Thức khuya</option>
+            </select>
+          </label>
+          <label>
+            <span>Ngưng caffeine</span>
+            <input class="form-input" type="time" name="caffeineCutoff" value="14:00">
+          </label>
+          <label>
+            <span>Giảm màn hình trước ngủ</span>
+            <input class="form-input" type="number" name="screenCutoffMin" min="0" max="180" value="60">
+          </label>
+          <label>
+            <span>Nhắc thư giãn trước</span>
+            <input class="form-input" type="number" name="relaxReminderMin" min="0" max="120" value="30">
+          </label>
+          <button class="btn btn-primary" type="submit">
+            <i class="fa-solid fa-floppy-disk" style="margin-right: 8px;"></i> Lưu hồ sơ
+          </button>
+        </form>
       </div>
 
       <div class="glass-panel" style="overflow: hidden; margin-bottom: 24px;">
@@ -660,6 +772,48 @@
 
     <div class="content-padding">
       <p style="margin-bottom: 20px;">Chọn âm thanh và thời điểm bắt đầu để AuraSleep dẫn bạn vào giấc ngủ nhẹ nhàng hơn.</p>
+
+      <div class="glass-panel routine-builder-card">
+        <div class="profile-card-header">
+          <div>
+            <span class="chart-kicker">Routine Builder v2</span>
+            <h3>Lưu routine cá nhân</h3>
+          </div>
+          <span class="premium-pill">Free: 3 routine</span>
+        </div>
+        <form id="routine-builder-form" class="routine-builder-form" onsubmit="saveRoutineBuilder(event)">
+          <label>
+            <span>Tên routine</span>
+            <input class="form-input" name="name" value="Routine thư giãn tối">
+          </label>
+          <label>
+            <span>Bắt đầu</span>
+            <input class="form-input" type="time" name="startTime" value="22:00">
+          </label>
+          <label>
+            <span>Chìm giấc</span>
+            <input class="form-input" type="time" name="sleepTime" value="22:30">
+          </label>
+          <label>
+            <span>Thức dậy</span>
+            <input class="form-input" type="time" name="wakeTime" value="06:30">
+          </label>
+          <div class="repeat-day-grid">
+            <label><input type="checkbox" name="repeatDays" value="mon" checked><span>T2</span></label>
+            <label><input type="checkbox" name="repeatDays" value="tue" checked><span>T3</span></label>
+            <label><input type="checkbox" name="repeatDays" value="wed" checked><span>T4</span></label>
+            <label><input type="checkbox" name="repeatDays" value="thu" checked><span>T5</span></label>
+            <label><input type="checkbox" name="repeatDays" value="fri" checked><span>T6</span></label>
+            <label><input type="checkbox" name="repeatDays" value="sat" checked><span>T7</span></label>
+            <label><input type="checkbox" name="repeatDays" value="sun" checked><span>CN</span></label>
+          </div>
+          <button class="btn btn-primary w-100" type="submit">
+            <i class="fa-solid fa-floppy-disk" style="margin-right: 8px;"></i> Lưu routine
+          </button>
+        </form>
+      </div>
+
+      <div class="routine-saved-list" id="routine-saved-list"></div>
 
       <div class="section-title">
         <h3>Âm thanh sẽ phát</h3>
@@ -925,6 +1079,20 @@
           <span>Chìm giấc sau</span>
           <input class="form-input" type="number" name="fallAsleepMin" min="0" max="180" value="15" required>
         </label>
+      </div>
+
+      <div class="sleep-factor-picker">
+        <span>Yếu tố ảnh hưởng</span>
+        <div class="sleep-factor-grid">
+          <label><input type="checkbox" name="factors" value="stress"><span>Stress</span></label>
+          <label><input type="checkbox" name="factors" value="caffeine"><span>Caffeine</span></label>
+          <label><input type="checkbox" name="factors" value="exercise"><span>Tập thể dục</span></label>
+          <label><input type="checkbox" name="factors" value="screen"><span>Màn hình khuya</span></label>
+          <label><input type="checkbox" name="factors" value="nap"><span>Ngủ trưa</span></label>
+          <label><input type="checkbox" name="factors" value="alcohol"><span>Rượu bia</span></label>
+          <label><input type="checkbox" name="factors" value="lateMeal"><span>Ăn muộn</span></label>
+          <label><input type="checkbox" name="factors" value="meditation"><span>Thiền</span></label>
+        </div>
       </div>
 
       <label class="sleep-entry-note">

@@ -45,6 +45,14 @@ export function updateUserUi(user) {
   document.querySelectorAll('.avatar').forEach(el => {
     el.textContent = displayName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   });
+
+  const planBadge = document.getElementById('profile-plan-badge');
+  if (planBadge) {
+    const plan = user.subscription?.plan || user.Subscriptions?.[0]?.plan || 'free';
+    const isPremium = plan !== 'free';
+    planBadge.textContent = isPremium ? 'Premium Member' : 'Free Member';
+    planBadge.style.color = isPremium ? 'var(--accent-primary)' : 'var(--text-secondary)';
+  }
 }
 
 export async function fetchUserInfo(token) {
@@ -81,6 +89,7 @@ export async function handleLogin(identifier, password, rememberLogin = false) {
       localStorage.setItem('aurasleep_token', data.token);
       updateUserUi(data.user);
       ensureWelcomeNotification(data.user);
+      await import('./sleep.js').then(module => module.loadSleepProfile());
       saveRememberedLogin(identifier, rememberLogin);
       navigateTo('dashboard');
     } else {
@@ -141,6 +150,7 @@ export async function handleRegister(fullName, email, password, phone) {
       localStorage.setItem('aurasleep_token', data.token);
       updateUserUi(data.user);
       ensureWelcomeNotification(data.user);
+      await import('./sleep.js').then(module => module.loadSleepProfile());
       navigateTo('dashboard');
     } else {
       const err = await res.json().catch(() => ({}));

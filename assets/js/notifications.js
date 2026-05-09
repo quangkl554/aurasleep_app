@@ -1,3 +1,5 @@
+import { apiFetch, getToken } from './api.js';
+
 const STORAGE_PREFIX = 'aurasleep_notifications_';
 
 function getUserKey(user = null) {
@@ -41,6 +43,8 @@ export function addNotification({ title, message, type = 'system', createdAt = n
 
 export function ensureWelcomeNotification(user) {
   rememberNotificationUser(user);
+  if (getToken()) return;
+
   const notifications = readNotifications(user);
   const hasWelcome = notifications.some(item => item.type === 'welcome');
   if (hasWelcome) return;
@@ -64,17 +68,31 @@ function formatNotificationTime(dateString) {
   });
 }
 
-export function openNotificationHistory() {
-  const overlay = document.getElementById('notification-history-modal');
-  const list = document.getElementById('notification-history-list');
-  if (!overlay || !list) return;
+async function fetchBackendNotifications() {
+  if (!getToken()) return null;
+  const res = await apiFetch('/api/auth/notifications');
+  if (!res.ok) throw new Error('Không thể tải thông báo');
+  return res.json();
+}
 
-  const notifications = readNotifications();
-  list.innerHTML = '';
+function renderNotifications(list, container) {
+  container.innerHTML = '';
 
-  notifications.forEach(item => {
+  if (!list.length) {
+    const empty = document.createElement('div');
+    empty.className = 'notification-empty';
+    empty.innerHTML = `
+      <i class="fa-regular fa-bell"></i>
+      <strong>Chưa có thông báo mới</strong>
+      <p>Lịch sử nhắc nhở, cảnh báo thiếu ngủ và cập nhật routine sẽ xuất hiện tại đây.</p>
+    `;
+    container.appendChild(empty);
+    return;
+  }
+
+  list.forEach(item => {
     const row = document.createElement('div');
-    row.className = 'notification-item';
+    row.className = `notification-item ${item.readAt ? '' : 'unread'}`;
     row.innerHTML = `
       <div class="notification-item-icon"><i class="fa-solid fa-bell"></i></div>
       <div>
@@ -85,12 +103,27 @@ export function openNotificationHistory() {
     `;
     row.querySelector('h4').textContent = item.title || 'Thông báo';
     row.querySelector('p').textContent = item.message || '';
-    row.querySelector('.notification-time').textContent = formatNotificationTime(item.createdAt);
-    list.appendChild(row);
+    row.querySelector('.notification-time').textContent = formatNotificationTime(item.createdAt || item.created_at);
+    container.appendChild(row);
   });
+}
 
+export async function openNotificationHistory() {
+  const overlay = document.getElementById('notification-history-modal');
+  const list = document.getElementById('notification-history-list');
+  if (!overlay || !list) return;
+
+  list.innerHTML = '<div class="notification-loading">Đang tải lịch sử...</div>';
   overlay.classList.add('active');
   overlay.setAttribute('aria-hidden', 'false');
+
+  try {
+    const notifications = await fetchBackendNotifications();
+    renderNotifications(notifications || readNotifications(), list);
+  } catch (err) {
+    console.warn(err.message);
+    renderNotifications(readNotifications(), list);
+  }
 }
 
 export function closeNotificationHistory() {

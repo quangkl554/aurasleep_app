@@ -68,6 +68,9 @@ const SleepRecord = sequelize.define('SleepRecord', {
         type: DataTypes.INTEGER,
         field: 'heart_rate_avg'
     },
+    factors: {
+        type: DataTypes.JSON
+    },
     notes: {
         type: DataTypes.TEXT
     }

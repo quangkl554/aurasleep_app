@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const { ChatSession, ChatMessage } = require('../models');
+const { ChatSession, ChatMessage, SleepRecord, SleepProfile } = require('../models');
 const { trackActivity } = require('../utils/tracking');
+const { Op } = require('sequelize');
 
 const GROQ_API_URL = process.env.GROQ_API_URL || 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
@@ -36,6 +37,48 @@ function buildFallbackReply(message) {
         '- Chọn một routine thư giãn 30-45 phút.',
         '- Giữ giờ ngủ/thức dậy ổn định trong vài ngày để AuraSleep phân tích chính xác hơn.'
     ].join('\n');
+}
+
+async function buildSleepContext(userId) {
+    try {
+        const endDate = new Date();
+        endDate.setHours(0, 0, 0, 0);
+        endDate.setDate(endDate.getDate() + 1);
+        const startDate = new Date(endDate);
+        startDate.setDate(startDate.getDate() - 7);
+
+        const [records, profile] = await Promise.all([
+            SleepRecord.findAll({
+                where: {
+                    userId,
+                    date: { [Op.gte]: startDate, [Op.lt]: endDate }
+                },
+                order: [['date', 'ASC']]
+            }),
+            SleepProfile.findOne({ where: { userId } })
+        ]);
+
+        if (!records.length) return 'No recent sleep records yet.';
+        const avg = (field) => Math.round(records.reduce((sum, record) => sum + (Number(record[field]) || 0), 0) / records.length);
+        const targetSleepMin = Number(profile?.targetSleepMin) || 480;
+        const avgSleep = avg('totalSleepMin');
+        const avgScore = avg('sleepScore');
+        const avgLatency = avg('fallAsleepMin');
+        const goalDays = records.filter((record) => (Number(record.totalSleepMin) || 0) >= targetSleepMin).length;
+
+        return [
+            `Recent records: ${records.length} nights.`,
+            `Target sleep: ${targetSleepMin} minutes.`,
+            `Average sleep: ${avgSleep} minutes.`,
+            `Average score: ${avgScore}/100.`,
+            `Average sleep latency: ${avgLatency} minutes.`,
+            `Goal days: ${goalDays}/${records.length}.`,
+            `Latest date: ${records[records.length - 1].date}.`
+        ].join(' ');
+    } catch (err) {
+        console.warn('AuraBot sleep context skipped:', err.message);
+        return 'Sleep context unavailable.';
+    }
 }
 
 router.post('/send', auth, async (req, res) => {
@@ -81,6 +124,7 @@ router.post('/send', auth, async (req, res) => {
             content: msg.content
         }));
 
+        const sleepContext = await buildSleepContext(req.user.id);
         const apiMessages = [
             {
                 role: 'system',
@@ -89,7 +133,8 @@ router.post('/send', auth, async (req, res) => {
                     'Use a calm, professional, empathetic tone.',
                     'Give concise, practical sleep, routine, light, and sound suggestions.',
                     'Answer in Vietnamese when the user writes Vietnamese.',
-                    'Do not diagnose disease or replace medical advice.'
+                    'Do not diagnose disease or replace medical advice.',
+                    `Use this real user sleep context when relevant: ${sleepContext}`
                 ].join(' ')
             },
             ...formattedHistory
