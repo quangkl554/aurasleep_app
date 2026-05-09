@@ -4,6 +4,54 @@ import { stopActiveSound } from './device.js';
 import { ensureWelcomeNotification, rememberNotificationUser } from './notifications.js';
 
 const REMEMBER_LOGIN_KEY = 'aurasleep_remember_login';
+let currentUser = null;
+
+function getUserPlan(user = currentUser) {
+  return user?.subscription?.plan || user?.Subscriptions?.[0]?.plan || 'free';
+}
+
+export function hasPremiumAccess() {
+  return getUserPlan() !== 'free';
+}
+
+export function isAdminUser() {
+  return currentUser?.role === 'admin';
+}
+
+function applyMembershipUi(user) {
+  const plan = getUserPlan(user);
+  const isPremium = plan !== 'free';
+  const isAdmin = user?.role === 'admin';
+
+  window.aurasleepCurrentUser = user;
+  window.aurasleepPlan = plan;
+  window.hasPremiumAccess = isPremium;
+  document.documentElement.dataset.plan = isPremium ? 'premium' : 'free';
+  document.documentElement.dataset.admin = isAdmin ? 'true' : 'false';
+
+  const adminPanel = document.getElementById('admin-membership-panel');
+  if (adminPanel) adminPanel.hidden = !isAdmin;
+
+  document.querySelectorAll('[data-admin-plan]').forEach(button => {
+    button.classList.toggle('active', button.dataset.adminPlan === (isPremium ? 'premium_monthly' : 'free'));
+    button.disabled = !isAdmin;
+  });
+
+  const premiumCta = document.getElementById('premium-cta-button');
+  if (premiumCta) {
+    premiumCta.disabled = isPremium;
+    premiumCta.innerHTML = isPremium
+      ? '<i class="fa-solid fa-check" style="margin-right: 8px;"></i> Premium đang hoạt động'
+      : '<i class="fa-solid fa-crown" style="margin-right: 8px;"></i> Đăng ký Premium';
+  }
+
+  const freeCurrent = document.getElementById('free-plan-current');
+  if (freeCurrent) {
+    freeCurrent.innerHTML = isPremium
+      ? '<i class="fa-solid fa-arrow-up" style="margin-right: 8px;"></i> Đã nâng cấp'
+      : '<i class="fa-solid fa-check" style="margin-right: 8px;"></i> Đang sử dụng';
+  }
+}
 
 function saveRememberedLogin(identifier, shouldRemember) {
   if (!shouldRemember) {
@@ -34,6 +82,7 @@ export function initRememberedLogin() {
 }
 
 export function updateUserUi(user) {
+  currentUser = user;
   rememberNotificationUser(user);
   const displayName = user.fullName || 'AURASLEEP';
   const nameElements = document.querySelectorAll('.header-greeting h2, h2');
@@ -48,11 +97,13 @@ export function updateUserUi(user) {
 
   const planBadge = document.getElementById('profile-plan-badge');
   if (planBadge) {
-    const plan = user.subscription?.plan || user.Subscriptions?.[0]?.plan || 'free';
+    const plan = getUserPlan(user);
     const isPremium = plan !== 'free';
     planBadge.textContent = isPremium ? 'Premium Member' : 'Free Member';
     planBadge.style.color = isPremium ? 'var(--accent-primary)' : 'var(--text-secondary)';
   }
+
+  applyMembershipUi(user);
 }
 
 export async function fetchUserInfo(token) {
@@ -188,6 +239,34 @@ export async function handleRegisterFromForm(button) {
 }
 
 window.handleRegisterFromForm = handleRegisterFromForm;
+
+export async function setAdminMembership(plan) {
+  if (!isAdminUser()) {
+    alert('Chỉ tài khoản quản trị mới có thể chuyển trạng thái test.');
+    return;
+  }
+
+  const targetPlan = plan === 'premium_monthly' ? 'premium_monthly' : 'free';
+  try {
+    const res = await apiFetch('/api/auth/membership', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan: targetPlan })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || 'Không thể chuyển trạng thái thành viên');
+    updateUserUi(data.user);
+    await import('./sleep.js').then(module => {
+      const activeRange = document.querySelector('#analytics-tabs .auth-tab.active')?.dataset.tab || 'week';
+      return module.loadSleepData(activeRange);
+    });
+    alert(targetPlan === 'premium_monthly' ? 'Đã chuyển sang Premium Member.' : 'Đã chuyển sang Free Member.');
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+window.setAdminMembership = setAdminMembership;
 
 export async function confirmLogout() {
   const res = await showAppConfirm('Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng không?', 'Xác nhận đăng xuất');

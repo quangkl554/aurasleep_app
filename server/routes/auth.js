@@ -22,6 +22,28 @@ const { createNotification } = require('../utils/notifications');
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const vietnamPhonePattern = /^(0|\+84)(\d{9}|\d{10})$/;
+const adminEmails = new Set(['quangkl554@gmail.com']);
+const adminPhones = new Set(['0918885850']);
+
+function normalizePhone(phone) {
+    if (typeof phone !== 'string') return '';
+    const trimmed = phone.trim();
+    if (trimmed.startsWith('+84')) return `0${trimmed.slice(3)}`;
+    return trimmed;
+}
+
+function isAdminAccount(userLike) {
+    const email = String(userLike?.email || '').trim().toLowerCase();
+    const phone = normalizePhone(userLike?.phone || userLike?.identifier || '');
+    return adminEmails.has(email) || adminPhones.has(phone);
+}
+
+async function ensureAdminRole(user) {
+    if (!user || !isAdminAccount(user) || user.role === 'admin') return user;
+    await user.update({ role: 'admin' });
+    user.role = 'admin';
+    return user;
+}
 
 function signToken(userId) {
     if (!process.env.JWT_SECRET) {
@@ -36,6 +58,7 @@ function signToken(userId) {
 }
 
 function publicUser(user) {
+    const latestSubscription = user.subscription || user.Subscriptions?.[0] || null;
     return {
         id: user.id,
         fullName: user.fullName,
@@ -45,7 +68,7 @@ function publicUser(user) {
         theme: user.theme,
         notifications: user.notifications,
         sleepProfile: user.sleepProfile || null,
-        subscription: user.Subscriptions?.[0] || null
+        subscription: latestSubscription
     };
 }
 
@@ -94,7 +117,8 @@ router.post('/register', async (req, res) => {
             fullName: normalizedName,
             email: normalizedEmail,
             passwordHash,
-            phone: normalizedPhone
+            phone: normalizedPhone,
+            role: isAdminAccount({ email: normalizedEmail, phone: normalizedPhone }) ? 'admin' : 'user'
         });
 
         await SleepProfile.create({ userId: user.id });
@@ -163,6 +187,7 @@ router.post('/login', async (req, res) => {
         if (!user) {
             return res.status(400).json({ message: 'Thong tin dang nhap khong hop le' });
         }
+        await ensureAdminRole(user);
 
         const isMatch = await bcrypt.compare(password, user.passwordHash);
         if (!isMatch) {
@@ -199,9 +224,76 @@ router.get('/me', auth, async (req, res) => {
             return res.status(404).json({ message: 'Khong tim thay user' });
         }
 
-        res.json(user);
+        await ensureAdminRole(user);
+        res.json(publicUser(user));
     } catch (err) {
         console.error('Me error:', err.message);
+        res.status(500).json({ message: 'Loi Server' });
+    }
+});
+
+router.put('/membership', auth, async (req, res) => {
+    try {
+        const user = await User.findByPk(req.user.id, {
+            include: [
+                { model: SleepProfile, as: 'sleepProfile' },
+                { model: Subscription, separate: true, limit: 1, order: [['created_at', 'DESC']] }
+            ]
+        });
+
+        if (!user) return res.status(404).json({ message: 'Khong tim thay user' });
+        await ensureAdminRole(user);
+        if (user.role !== 'admin') {
+            return res.status(403).json({ message: 'Chi tai khoan quan tri moi duoc chuyen goi test' });
+        }
+
+        const plan = req.body.plan === 'premium_monthly' ? 'premium_monthly' : 'free';
+        const price = plan === 'premium_monthly' ? 99000 : 0;
+        const now = new Date();
+        const endDate = new Date(now);
+        endDate.setFullYear(endDate.getFullYear() + 1);
+
+        let subscription = user.Subscriptions?.[0] || null;
+        if (subscription) {
+            await subscription.update({
+                plan,
+                price,
+                status: 'active',
+                startDate: now,
+                endDate: plan === 'free' ? null : endDate,
+                paymentMethod: 'admin_toggle',
+                autoRenew: false
+            });
+        } else {
+            subscription = await Subscription.create({
+                userId: user.id,
+                plan,
+                price,
+                status: 'active',
+                startDate: now,
+                endDate: plan === 'free' ? null : endDate,
+                paymentMethod: 'admin_toggle'
+            });
+        }
+
+        await trackActivity(req, {
+            userId: user.id,
+            eventType: 'membership_toggled',
+            entityType: 'subscription',
+            entityId: subscription.id,
+            metadata: { plan, source: 'admin_profile_switch' }
+        });
+
+        const refreshedUser = await User.findByPk(user.id, {
+            include: [
+                { model: SleepProfile, as: 'sleepProfile' },
+                { model: Subscription, separate: true, limit: 1, order: [['created_at', 'DESC']] }
+            ]
+        });
+
+        res.json({ user: publicUser(refreshedUser) });
+    } catch (err) {
+        console.error('Membership update error:', err.message);
         res.status(500).json({ message: 'Loi Server' });
     }
 });

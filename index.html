@@ -533,7 +533,7 @@
             <li><i class="fa-solid fa-check"></i> <span>Báo cáo giấc ngủ chuyên sâu</span></li>
             <li><i class="fa-solid fa-check"></i> <span>Nội dung âm thanh độc quyền (50+)</span></li>
           </ul>
-          <button class="btn btn-primary w-100" onclick="upgradePremium()">
+          <button class="btn btn-primary w-100" id="premium-cta-button" onclick="upgradePremium()">
             <i class="fa-solid fa-crown" style="margin-right: 8px;"></i> Đăng ký Premium
           </button>
         </div>
@@ -545,13 +545,13 @@
             <div class="price-amount">0₫ <span>/mãi mãi</span></div>
           </div>
           <ul class="feature-list">
-            <li><i class="fa-solid fa-check"></i> <span>Âm thanh white noise cơ bản</span></li>
-            <li><i class="fa-solid fa-check"></i> <span>Ánh sáng dịu nhẹ cố định</span></li>
-            <li><i class="fa-solid fa-check"></i> <span>Hẹn giờ tắt đơn giản</span></li>
-            <li class="disabled"><i class="fa-solid fa-xmark"></i> <span>AI cá nhân hóa Routine</span></li>
-            <li class="disabled"><i class="fa-solid fa-xmark"></i> <span>Fade-in/Fade-out thông minh</span></li>
+            <li><i class="fa-solid fa-check"></i> <span>Dashboard và ghi nhận giấc ngủ cơ bản</span></li>
+            <li><i class="fa-solid fa-check"></i> <span>Tối đa 3 routine thư giãn</span></li>
+            <li><i class="fa-solid fa-check"></i> <span>Điều khiển đèn, âm thanh và AuraBot cơ bản</span></li>
+            <li class="disabled"><i class="fa-solid fa-xmark"></i> <span>Báo cáo tuần/tháng chuyên sâu</span></li>
+            <li class="disabled"><i class="fa-solid fa-xmark"></i> <span>Export dữ liệu và insight nâng cao</span></li>
           </ul>
-          <div class="btn btn-outline w-100 plan-current" aria-label="Gói hiện tại">
+          <div class="btn btn-outline w-100 plan-current" id="free-plan-current" aria-label="Gói hiện tại">
             <i class="fa-solid fa-check" style="margin-right: 8px;"></i> Đang sử dụng
           </div>
         </div>
@@ -572,6 +572,18 @@
         <div class="avatar" style="width: 80px; height: 80px; font-size: 32px; margin-bottom: 16px;">AS</div>
         <h2>AURASLEEP</h2>
         <div id="profile-plan-badge" style="background: rgba(244,162,97,0.2); color: var(--accent-primary); padding: 4px 12px; border-radius: 100px; font-size: 12px; font-weight: 600;">Free Member</div>
+      </div>
+
+      <div class="glass-panel admin-membership-panel" id="admin-membership-panel" hidden>
+        <div>
+          <span class="chart-kicker">Admin test</span>
+          <h3>Chuyển giao diện thành viên</h3>
+          <p>Chỉ tài khoản quản trị mới thấy thanh này. Dùng để kiểm tra giao diện Free và Premium.</p>
+        </div>
+        <div class="admin-member-switch">
+          <button type="button" data-admin-plan="free" onclick="setAdminMembership('free')">Free</button>
+          <button type="button" data-admin-plan="premium_monthly" onclick="setAdminMembership('premium_monthly')">Premium</button>
+        </div>
       </div>
 
       <div class="glass-panel" style="overflow: hidden; margin-bottom: 24px;">

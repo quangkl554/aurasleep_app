@@ -361,9 +361,29 @@ function renderReportList(selector, items, emptyText) {
   });
 }
 
+function renderPremiumLockedReport() {
+  const panel = document.getElementById('sleep-report-panel');
+  if (!panel) return;
+  panel.classList.add('active', 'premium-locked');
+  setText('#report-record-count', 'Premium');
+  setText('#report-sleep-debt', '--');
+  setText('#report-consistency', '--');
+  setText('#report-goal-rate', '--');
+  setText('#report-best-night', 'Mở khóa trong Premium');
+  setText('#report-worst-night', 'Mở khóa trong Premium');
+  renderReportList('#report-factor-list', ['Free vẫn xem được biểu đồ cơ bản, điểm ngủ và thống kê ngắn.'], '');
+  renderReportList('#report-recommendations', ['Premium mở khóa báo cáo tuần/tháng, yếu tố ảnh hưởng và khuyến nghị chuyên sâu.'], '');
+}
+
 async function loadSleepReport(range, selectedDate) {
   const panel = document.getElementById('sleep-report-panel');
   if (!panel) return;
+  panel.classList.remove('premium-locked');
+
+  if (!window.hasPremiumAccess) {
+    renderPremiumLockedReport();
+    return;
+  }
 
   try {
     const res = await apiFetch(`/api/sleep/report?range=${range === 'month' ? 'month' : 'week'}&date=${encodeURIComponent(selectedDate)}`);

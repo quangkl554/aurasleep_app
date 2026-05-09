@@ -207,6 +207,11 @@ window.openProfileInfo = openProfileInfo;
 window.closeProfileInfo = closeProfileInfo;
 
 export async function exportAccountData() {
+  if (!window.hasPremiumAccess) {
+    alert('Export dữ liệu là tính năng Premium. Bạn có thể chuyển sang Premium bằng tài khoản admin để test.');
+    return;
+  }
+
   try {
     const res = await apiFetch('/api/auth/export');
     if (!res.ok) throw new Error('Không thể xuất dữ liệu');

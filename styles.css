@@ -2354,6 +2354,70 @@ input[type=range]::-webkit-slider-thumb {
   background: rgba(244, 162, 97, 0.09);
 }
 
+.admin-membership-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  margin-bottom: 20px;
+  border-radius: 20px;
+}
+
+.admin-membership-panel[hidden] {
+  display: none;
+}
+
+.admin-membership-panel h3 {
+  margin: 3px 0 4px;
+  font-size: 16px;
+}
+
+.admin-membership-panel p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.admin-member-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.admin-member-switch button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.admin-member-switch button.active {
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent-secondary), var(--accent-primary));
+  box-shadow: 0 8px 18px rgba(244, 162, 97, 0.18);
+}
+
+.sleep-report-panel.premium-locked {
+  border-color: rgba(244, 162, 97, 0.35);
+  background:
+    linear-gradient(180deg, rgba(244, 162, 97, 0.1), rgba(255, 255, 255, 0.035)),
+    var(--card-bg);
+}
+
+.sleep-report-panel.premium-locked .report-metrics strong,
+.sleep-report-panel.premium-locked .report-night-row strong {
+  color: var(--accent-primary);
+}
+
 .profile-info-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
