@@ -264,9 +264,9 @@
           <div class="sound-icon" style="color: #8B4513;"><i class="fa-solid fa-wave-square"></i></div>
           <span>Brown Noise</span>
         </div>
-        <div class="sound-item" data-sound="fire" data-freq="Âm thanh nổ lách tách">
-          <div class="sound-icon"><i class="fa-solid fa-fire"></i></div>
-          <span>Lửa trại</span>
+        <div class="sound-item active" data-sound="white" data-freq="Băng thông rộng (20Hz-20kHz)">
+          <div class="sound-icon"><i class="fa-solid fa-wave-square"></i></div>
+          <span>White Noise</span>
         </div>
         <div class="sound-item" data-sound="pink" data-freq="1/f (Công suất đều)">
           <div class="sound-icon" style="color: #FFC0CB;"><i class="fa-solid fa-wave-square"></i></div>
@@ -280,9 +280,9 @@
           <div class="sound-icon"><i class="fa-solid fa-droplet"></i></div>
           <span>Suối chảy</span>
         </div>
-        <div class="sound-item active" data-sound="white" data-freq="Băng thông rộng (20Hz-20kHz)">
-          <div class="sound-icon"><i class="fa-solid fa-wave-square"></i></div>
-          <span>White Noise</span>
+        <div class="sound-item" data-sound="fire" data-freq="Âm thanh nổ lách tách">
+          <div class="sound-icon"><i class="fa-solid fa-fire"></i></div>
+          <span>Lửa trại</span>
         </div>
         
         <!-- NEW SOUNDS -->
@@ -406,6 +406,11 @@
       </div>
 
       <div class="premium-analytics-lock">
+        <div class="premium-lock-heading">
+          <span class="chart-kicker">Thông tin Premium</span>
+          <h3>Phân tích nâng cao</h3>
+          <p>Nợ ngủ, độ đều lịch ngủ, chuỗi đạt mục tiêu và báo cáo thực tiễn.</p>
+        </div>
         <div class="premium-locked-content">
           <div class="analytics-insights-grid">
             <div class="glass-panel insight-card">
@@ -478,7 +483,7 @@
             </div>
           </div>
         </div>
-        <div class="premium-lock-overlay">Mở khóa trong bản Premium</div>
+        <a class="premium-lock-overlay" href="#" onclick="navigateTo('store'); return false;">Mở khóa trong bản Premium</a>
       </div>
 
       <div class="glass-panel ai-card mt-4">
@@ -801,9 +806,9 @@
           <i class="fa-solid fa-wave-square"></i>
           <span>Brown Noise</span>
         </button>
-        <button type="button" class="routine-sound-option" data-routine-sound="fire" onclick="selectRoutineSound(this)">
-          <i class="fa-solid fa-fire"></i>
-          <span>Lửa trại</span>
+        <button type="button" class="routine-sound-option" data-routine-sound="white" onclick="selectRoutineSound(this)">
+          <i class="fa-solid fa-wave-square"></i>
+          <span>White Noise</span>
         </button>
         <button type="button" class="routine-sound-option" data-routine-sound="pink" onclick="selectRoutineSound(this)">
           <i class="fa-solid fa-wave-square"></i>
@@ -817,9 +822,9 @@
           <i class="fa-solid fa-droplet"></i>
           <span>Suối chảy</span>
         </button>
-        <button type="button" class="routine-sound-option" data-routine-sound="white" onclick="selectRoutineSound(this)">
-          <i class="fa-solid fa-wave-square"></i>
-          <span>White Noise</span>
+        <button type="button" class="routine-sound-option" data-routine-sound="fire" onclick="selectRoutineSound(this)">
+          <i class="fa-solid fa-fire"></i>
+          <span>Lửa trại</span>
         </button>
         <button type="button" class="routine-sound-option" data-routine-sound="birds" onclick="selectRoutineSound(this)">
           <i class="fa-solid fa-dove"></i>
