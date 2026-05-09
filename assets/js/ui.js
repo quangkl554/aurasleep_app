@@ -4,6 +4,7 @@ import { isAudioSessionActive, stopActiveSound } from './device.js';
 let appAlertCloseHandler = null;
 let appPromptResolver = null;
 let appConfirmResolver = null;
+let currentScreenId = null;
 const nativeAlert = window.alert.bind(window);
 
 const profileInfoContent = {
@@ -227,11 +228,15 @@ export function navigateTo(screenId, navElement = null) {
     navElement = null;
   }
 
-  const screens = document.querySelectorAll('.screen');
-  screens.forEach(screen => screen.classList.remove('active'));
+  const isSameScreen = currentScreenId === screenId;
+
+  if (!isSameScreen) {
+    const screens = document.querySelectorAll('.screen');
+    screens.forEach(screen => screen.classList.remove('active'));
+  }
 
   const targetScreen = document.getElementById(screenId + '-screen');
-  if (targetScreen) {
+  if (targetScreen && !isSameScreen) {
     targetScreen.classList.add('active');
     targetScreen.scrollTop = 0;
   }
@@ -248,10 +253,13 @@ export function navigateTo(screenId, navElement = null) {
   updateBottomNavVisibility(screenId);
 
   // Trigger data loading based on screen
-  if (screenId === 'dashboard' && window.loadDashboardData) window.loadDashboardData();
-  if (screenId === 'device' && window.fetchDeviceData) window.fetchDeviceData();
-  if (screenId === 'analytics' && window.loadSleepData) window.loadSleepData('week');
-  if (screenId === 'routine' && window.fetchRoutines) window.fetchRoutines();
+  if (!isSameScreen && screenId === 'dashboard' && window.loadDashboardData) window.loadDashboardData();
+  if (!isSameScreen && screenId === 'device' && window.fetchDeviceData) window.fetchDeviceData();
+  if (!isSameScreen && screenId === 'analytics' && window.loadSleepData) {
+    const activeRange = document.querySelector('#analytics-tabs .auth-tab.active')?.dataset.tab || 'week';
+    window.loadSleepData(activeRange);
+  }
+  if (!isSameScreen && screenId === 'routine' && window.fetchRoutines) window.fetchRoutines();
 
   const pulseNavItem = (item) => {
     if (!item) return;
@@ -276,6 +284,7 @@ export function navigateTo(screenId, navElement = null) {
     }
   }
   
+  currentScreenId = screenId;
   window.location.hash = screenId;
 }
 

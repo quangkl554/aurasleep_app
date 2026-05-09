@@ -38,8 +38,8 @@
   --nav-bg: var(--nav-bg-dark);
 
   --font-family: 'Inter', sans-serif;
-  --transition-fast: 0.2s ease;
-  --transition-smooth: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-fast: 0.16s ease;
+  --transition-smooth: 0.24s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 [data-theme="light"] {
@@ -382,8 +382,8 @@ body {
   padding-bottom: calc(100px + env(safe-area-inset-bottom));
   opacity: 0;
   pointer-events: none;
-  transform: translateX(20px);
-  transition: opacity var(--transition-smooth), transform var(--transition-smooth);
+  transform: translateX(8px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
   z-index: 10;
   contain: layout paint;
 }
@@ -423,8 +423,8 @@ body {
 /* Glassmorphism Classes */
 .glass-panel {
   background: var(--card-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--border);
   border-radius: 24px;
   box-shadow: var(--shadow);
@@ -500,32 +500,88 @@ p { font-size: 14px; line-height: 1.5; color: var(--text-secondary); }
 .analytics-date-control {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px;
   margin-bottom: 14px;
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 22px;
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 800;
 }
 
 .analytics-date-control input {
-  min-width: 145px;
-  border: 0;
-  border-radius: 14px;
-  padding: 10px 12px;
-  background: var(--card-bg);
-  color: var(--text-primary);
-  font: inherit;
-  font-size: 13px;
-  color-scheme: dark;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }
 
-[data-theme="light"] .analytics-date-control input {
-  color-scheme: light;
+.date-step-btn,
+.date-picker-button {
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.date-step-btn {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.date-picker-button {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 8px 12px;
+  border-radius: 18px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent-secondary), var(--accent-primary));
+  box-shadow: 0 10px 22px rgba(244, 162, 97, 0.2);
+}
+
+.date-picker-button i {
+  font-size: 17px;
+}
+
+.date-picker-button span {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.1;
+}
+
+.date-picker-button small {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.76;
+}
+
+.date-picker-button strong {
+  margin-top: 3px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.date-step-btn:active,
+.date-picker-button:active {
+  transform: scale(0.97);
+}
+
+.date-step-btn:hover {
+  background: rgba(244, 162, 97, 0.16);
 }
 
 .chart-bar-container {
@@ -747,8 +803,8 @@ p { font-size: 14px; line-height: 1.5; color: var(--text-secondary); }
   width: 100%;
   height: calc(80px + env(safe-area-inset-bottom));
   background: var(--nav-bg);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-top: 1px solid var(--border);
   display: flex;
   justify-content: space-around;

@@ -37,7 +37,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const analyticsDateInput = document.getElementById('analytics-date-input');
   if (analyticsDateInput) {
     analyticsDateInput.value = getTodayDateString();
+    updateAnalyticsDateLabel();
     analyticsDateInput.addEventListener('change', () => {
+      updateAnalyticsDateLabel();
       const activeRange = document.querySelector('#analytics-tabs .auth-tab.active')?.dataset.tab || 'week';
       loadSleepData(activeRange);
     });
@@ -45,6 +47,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.querySelectorAll('#analytics-tabs .auth-tab').forEach(tab => {
     tab.addEventListener('click', () => {
+      if (tab.classList.contains('active')) return;
       document.querySelectorAll('#analytics-tabs .auth-tab').forEach(item => item.classList.remove('active'));
       tab.classList.add('active');
       loadSleepData(tab.dataset.tab || 'week');
@@ -52,6 +55,57 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
 });
+
+function formatFriendlyDate(dateString) {
+  const today = getTodayDateString();
+  const date = new Date(`${dateString}T00:00:00`);
+  if (dateString === today) return 'Hôm nay';
+  if (Number.isNaN(date.getTime())) return 'Chọn ngày';
+  return date.toLocaleDateString('vi-VN', {
+    weekday: 'short',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+}
+
+function updateAnalyticsDateLabel() {
+  const input = document.getElementById('analytics-date-input');
+  const label = document.getElementById('analytics-date-label');
+  if (!input || !label) return;
+  if (!input.value) input.value = getTodayDateString();
+  label.textContent = formatFriendlyDate(input.value);
+}
+
+function reloadActiveAnalytics() {
+  const activeRange = document.querySelector('#analytics-tabs .auth-tab.active')?.dataset.tab || 'week';
+  loadSleepData(activeRange);
+}
+
+function openAnalyticsDatePicker() {
+  const input = document.getElementById('analytics-date-input');
+  if (!input) return;
+  if (typeof input.showPicker === 'function') {
+    input.showPicker();
+  } else {
+    input.focus();
+    input.click();
+  }
+}
+
+function shiftAnalyticsDate(days) {
+  const input = document.getElementById('analytics-date-input');
+  if (!input) return;
+  const base = new Date(`${input.value || getTodayDateString()}T00:00:00`);
+  base.setDate(base.getDate() + days);
+  const next = new Date(base.getTime() - base.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  input.value = next;
+  updateAnalyticsDateLabel();
+  reloadActiveAnalytics();
+}
+
+window.openAnalyticsDatePicker = openAnalyticsDatePicker;
+window.shiftAnalyticsDate = shiftAnalyticsDate;
 
 // Expose some functions to window for global access if needed
 window.toggleTheme = toggleTheme;

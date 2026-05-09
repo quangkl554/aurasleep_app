@@ -304,10 +304,22 @@
         <div class="auth-tab" data-tab="month">Tháng</div>
       </div>
 
-      <label class="analytics-date-control">
-        <span>Chọn ngày phân tích</span>
-        <input type="date" id="analytics-date-input">
-      </label>
+      <div class="analytics-date-control">
+        <button class="date-step-btn" type="button" onclick="shiftAnalyticsDate(-1)" aria-label="Ngày trước">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <button class="date-picker-button" type="button" onclick="openAnalyticsDatePicker()">
+          <i class="fa-regular fa-calendar"></i>
+          <span>
+            <small>Ngày phân tích</small>
+            <strong id="analytics-date-label">Hôm nay</strong>
+          </span>
+        </button>
+        <button class="date-step-btn" type="button" onclick="shiftAnalyticsDate(1)" aria-label="Ngày sau">
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+        <input type="date" id="analytics-date-input" aria-label="Chọn ngày phân tích">
+      </div>
 
       <div class="glass-panel analytics-chart-panel mb-4" id="sleep-chart">
         <div class="chart-header">

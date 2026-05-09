@@ -1,5 +1,8 @@
 import { apiFetch } from './api.js';
 
+const sleepDataCache = new Map();
+const SLEEP_CACHE_TTL_MS = 30000;
+
 export function getTodayDateString() {
   const now = new Date();
   const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
@@ -93,6 +96,7 @@ export async function submitSleepEntry(event) {
 
     if (!res.ok) throw new Error('Không thể lưu dữ liệu');
     
+    sleepDataCache.clear();
     closeSleepEntryModal();
     await loadDashboardData();
     await loadSleepData('week');
@@ -336,8 +340,16 @@ export async function loadSleepData(range = 'week') {
 
   try {
     const selectedDate = getAnalyticsDate();
-    const res = await apiFetch(`/api/sleep?range=${range}&date=${encodeURIComponent(selectedDate)}`);
-    const data = await res.json();
+    const cacheKey = `${range}:${selectedDate}`;
+    const cached = sleepDataCache.get(cacheKey);
+    let data;
+    if (cached && Date.now() - cached.timestamp < SLEEP_CACHE_TTL_MS) {
+      data = cached.data;
+    } else {
+      const res = await apiFetch(`/api/sleep?range=${range}&date=${encodeURIComponent(selectedDate)}`);
+      data = await res.json();
+      sleepDataCache.set(cacheKey, { data, timestamp: Date.now() });
+    }
     
     const bars = document.querySelectorAll('#sleep-chart .chart-bar');
     const vals = document.querySelectorAll('#sleep-chart .chart-value');
