@@ -5,6 +5,8 @@ import { getTodayDateString, loadDashboardData, loadSleepData } from './sleep.js
 import { fetchDeviceData, fetchRoutines, initDeviceControls, initSoundGrid } from './device.js';
 import './chat.js';
 
+let calendarCursorDate = null;
+
 document.addEventListener('DOMContentLoaded', async () => {
   // Load theme
   const savedTheme = localStorage.getItem('aurasleep_theme') || 'dark';
@@ -85,12 +87,11 @@ function reloadActiveAnalytics() {
 function openAnalyticsDatePicker() {
   const input = document.getElementById('analytics-date-input');
   if (!input) return;
-  if (typeof input.showPicker === 'function') {
-    input.showPicker();
-  } else {
-    input.focus();
-    input.click();
-  }
+  calendarCursorDate = new Date(`${input.value || getTodayDateString()}T00:00:00`);
+  renderAnalyticsCalendar();
+  const modal = document.getElementById('analytics-calendar-modal');
+  modal?.classList.add('active');
+  modal?.setAttribute('aria-hidden', 'false');
 }
 
 function shiftAnalyticsDate(days) {
@@ -106,6 +107,71 @@ function shiftAnalyticsDate(days) {
 
 window.openAnalyticsDatePicker = openAnalyticsDatePicker;
 window.shiftAnalyticsDate = shiftAnalyticsDate;
+
+function closeAnalyticsCalendar() {
+  const modal = document.getElementById('analytics-calendar-modal');
+  modal?.classList.remove('active');
+  modal?.setAttribute('aria-hidden', 'true');
+}
+
+function shiftCalendarMonth(months) {
+  const input = document.getElementById('analytics-date-input');
+  const base = calendarCursorDate || new Date(`${input?.value || getTodayDateString()}T00:00:00`);
+  calendarCursorDate = new Date(base.getFullYear(), base.getMonth() + months, 1);
+  renderAnalyticsCalendar();
+}
+
+function selectAnalyticsDate(dateString) {
+  const input = document.getElementById('analytics-date-input');
+  if (!input) return;
+  input.value = dateString;
+  calendarCursorDate = new Date(`${dateString}T00:00:00`);
+  updateAnalyticsDateLabel();
+  reloadActiveAnalytics();
+  closeAnalyticsCalendar();
+}
+
+function toDateInputValue(date) {
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+
+function renderAnalyticsCalendar() {
+  const grid = document.getElementById('analytics-calendar-grid');
+  const label = document.getElementById('calendar-month-label');
+  const input = document.getElementById('analytics-date-input');
+  if (!grid || !label || !input) return;
+
+  const selectedValue = input.value || getTodayDateString();
+  const todayValue = getTodayDateString();
+  const cursor = calendarCursorDate || new Date(`${selectedValue}T00:00:00`);
+  const monthStart = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+  const startOffset = (monthStart.getDay() + 6) % 7;
+  const gridStart = new Date(monthStart);
+  gridStart.setDate(monthStart.getDate() - startOffset);
+
+  label.textContent = monthStart.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
+  grid.innerHTML = '';
+
+  for (let i = 0; i < 42; i += 1) {
+    const date = new Date(gridStart);
+    date.setDate(gridStart.getDate() + i);
+    const value = toDateInputValue(date);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'calendar-day';
+    button.textContent = String(date.getDate());
+    if (date.getMonth() !== monthStart.getMonth()) button.classList.add('muted');
+    if (value === todayValue) button.classList.add('today');
+    if (value === selectedValue) button.classList.add('selected');
+    button.addEventListener('click', () => selectAnalyticsDate(value));
+    grid.appendChild(button);
+  }
+}
+
+window.closeAnalyticsCalendar = closeAnalyticsCalendar;
+window.shiftCalendarMonth = shiftCalendarMonth;
+window.selectAnalyticsDate = selectAnalyticsDate;
+window.getTodayDateString = getTodayDateString;
 
 // Expose some functions to window for global access if needed
 window.toggleTheme = toggleTheme;

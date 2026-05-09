@@ -2,6 +2,9 @@ import { apiFetch } from './api.js';
 
 const sleepDataCache = new Map();
 const SLEEP_CACHE_TTL_MS = 30000;
+const TARGET_SLEEP_MIN = 480;
+const GOOD_SLEEP_MIN = 420;
+const GOOD_LATENCY_MIN = 20;
 
 export function getTodayDateString() {
   const now = new Date();
@@ -136,6 +139,31 @@ function formatPercentChange(current, previous) {
 function setText(selector, value) {
   const element = document.querySelector(selector);
   if (element) element.textContent = value;
+}
+
+function setStatCard(id, title, value, meta, tone = null) {
+  const valueEl = document.getElementById(id);
+  const card = valueEl?.closest('.analytics-stat-card');
+  const titleEl = card?.querySelector('.stat-title');
+  const metaEl = document.getElementById(`${id}-meta`);
+  if (titleEl) titleEl.textContent = title;
+  if (valueEl) {
+    valueEl.textContent = value;
+    valueEl.style.color = tone || '';
+  }
+  if (metaEl) metaEl.textContent = meta;
+}
+
+function formatSignedDuration(minutes) {
+  const abs = Math.abs(Math.round(minutes));
+  const sign = minutes >= 0 ? '+' : '-';
+  return `${sign}${formatSleepDuration(abs)}`;
+}
+
+function getLatencyMeta(minutes) {
+  if (minutes <= GOOD_LATENCY_MIN) return 'Trong ngưỡng tốt';
+  if (minutes <= 35) return 'Hơi lâu, nên thư giãn sớm hơn';
+  return 'Cao, cần xem lại routine tối';
 }
 
 function toDate(value) {
@@ -383,10 +411,10 @@ export async function loadSleepData(range = 'week') {
     if (!data || data.length === 0) {
       emptyState?.classList.add('visible');
       if (emptyState) emptyState.textContent = rangeCopy.empty;
-      setText('#analytics-avg', '--');
-      setText('#analytics-change', '--');
-      setText('#analytics-latency', '--');
-      setText('#analytics-quality', '--');
+      setStatCard('analytics-avg', 'Thời lượng', '--', 'Chưa có bản ghi');
+      setStatCard('analytics-change', 'Mục tiêu', '--', 'Cần dữ liệu để so sánh');
+      setStatCard('analytics-latency', 'Chìm giấc', '--', 'Chưa có dữ liệu');
+      setStatCard('analytics-quality', 'Chất lượng', '--', 'Chưa có dữ liệu');
       setText('#analytics-screen .ai-card h4', rangeCopy.noDataTitle);
       setText('#analytics-screen .ai-card p', rangeCopy.empty);
       return;
@@ -419,6 +447,13 @@ export async function loadSleepData(range = 'week') {
     const avgSleep = Math.round(average(data, 'totalSleepMin'));
     const avgLatency = Math.round(average(data, 'fallAsleepMin'));
     const avgQuality = Math.round(average(data, 'sleepScore'));
+    const avgEfficiency = Math.round(average(data, 'efficiency'));
+    const daysAtGoal = data.filter(record => (Number(record.totalSleepMin) || 0) >= GOOD_SLEEP_MIN).length;
+    const goalRate = data.length ? Math.round((daysAtGoal / data.length) * 100) : 0;
+    const latestSleep = Number(dayRecord.totalSleepMin) || 0;
+    const latestLatency = Number(dayRecord.fallAsleepMin) || 0;
+    const latestEfficiency = Number(dayRecord.efficiency) || 0;
+    const latestScore = Number(dayRecord.sleepScore) || 0;
     const midpoint = Math.floor(data.length / 2);
     const previousRecords = data.slice(0, midpoint);
     const currentRecords = data.slice(midpoint);
@@ -427,11 +462,25 @@ export async function loadSleepData(range = 'week') {
     const changeText = data.length > 1 ? formatPercentChange(currentAvg, previousAvg) : '--';
     const changeEl = document.getElementById('analytics-change');
 
-    setText('#analytics-avg', formatSleepDuration(avgSleep));
-    setText('#analytics-change', changeText);
-    setText('#analytics-latency', `${avgLatency} phút`);
-    setText('#analytics-quality', `${avgQuality}/100`);
-    if (changeEl) changeEl.style.color = changeText.startsWith('-') ? '#ef4444' : '#10b981';
+    if (range === 'today') {
+      const delta = latestSleep - TARGET_SLEEP_MIN;
+      setStatCard('analytics-avg', 'Ngủ thực tế', formatSleepDuration(latestSleep), 'Mục tiêu 8h mỗi đêm', 'var(--accent-primary)');
+      setStatCard(
+        'analytics-change',
+        'So với mục tiêu',
+        formatSignedDuration(delta),
+        delta >= 0 ? 'Đã đạt mục tiêu hôm nay' : 'Thiếu ngủ so với mục tiêu',
+        delta >= 0 ? '#10b981' : '#ef4444'
+      );
+      setStatCard('analytics-latency', 'Chìm giấc', `${latestLatency} phút`, getLatencyMeta(latestLatency));
+      setStatCard('analytics-quality', 'Hiệu suất', `${latestEfficiency}%`, `Điểm ngủ ${latestScore}/100`);
+    } else {
+      setStatCard('analytics-avg', 'TB mỗi ngày', formatSleepDuration(avgSleep), `${data.length} bản ghi trong kỳ`, 'var(--accent-primary)');
+      setStatCard('analytics-change', 'Đạt mục tiêu', `${goalRate}%`, `${daysAtGoal}/${data.length} ngày ngủ từ 7h trở lên`, goalRate >= 70 ? '#10b981' : '#ef4444');
+      setStatCard('analytics-latency', 'Chìm giấc TB', `${avgLatency} phút`, getLatencyMeta(avgLatency));
+      setStatCard('analytics-quality', 'Chất lượng TB', `${avgQuality}/100`, `Hiệu suất TB ${avgEfficiency}%`);
+    }
+    if (changeEl && range !== 'today') changeEl.style.color = goalRate >= 70 ? '#10b981' : '#ef4444';
 
     const trendTitle = avgQuality >= 85 ? 'Giấc ngủ đang ổn định' : 'Cần cải thiện nhẹ';
     const trendPrefix = range === 'today' ? 'Ngày đã chọn' : range === 'month' ? 'Tháng này' : 'Tuần này';

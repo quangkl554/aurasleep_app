@@ -366,18 +366,22 @@
         <div class="glass-panel stat-item analytics-stat-card">
           <span class="stat-title">Trung bình</span>
           <span class="stat-val" id="analytics-avg">--</span>
+          <span class="stat-meta" id="analytics-avg-meta">--</span>
         </div>
         <div class="glass-panel stat-item analytics-stat-card">
           <span class="stat-title">Thay đổi</span>
           <span class="stat-val" id="analytics-change">--</span>
+          <span class="stat-meta" id="analytics-change-meta">--</span>
         </div>
         <div class="glass-panel stat-item analytics-stat-card">
           <span class="stat-title">Chìm giấc</span>
           <span class="stat-val" id="analytics-latency">--</span>
+          <span class="stat-meta" id="analytics-latency-meta">--</span>
         </div>
         <div class="glass-panel stat-item analytics-stat-card">
           <span class="stat-title">Chất lượng</span>
           <span class="stat-val" id="analytics-quality">--</span>
+          <span class="stat-meta" id="analytics-quality-meta">--</span>
         </div>
       </div>
 
@@ -832,6 +836,38 @@
         <p id="profile-info-description"></p>
       </div>
       <div id="profile-info-list" class="profile-info-list"></div>
+    </div>
+  </div>
+
+  <div id="analytics-calendar-modal" class="app-alert-overlay analytics-calendar-overlay" aria-hidden="true">
+    <div class="app-alert-dialog analytics-calendar-dialog" role="dialog" aria-modal="true" aria-labelledby="analytics-calendar-title">
+      <div class="calendar-sheet-handle"></div>
+      <div class="calendar-header">
+        <div>
+          <span class="chart-kicker">Chọn ngày</span>
+          <h3 id="analytics-calendar-title">Lịch phân tích</h3>
+        </div>
+        <button class="icon-btn" type="button" onclick="closeAnalyticsCalendar()" aria-label="Đóng lịch">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="calendar-month-row">
+        <button class="date-step-btn" type="button" onclick="shiftCalendarMonth(-1)" aria-label="Tháng trước">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <strong id="calendar-month-label">--</strong>
+        <button class="date-step-btn" type="button" onclick="shiftCalendarMonth(1)" aria-label="Tháng sau">
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+      </div>
+      <div class="calendar-weekdays">
+        <span>T2</span><span>T3</span><span>T4</span><span>T5</span><span>T6</span><span>T7</span><span>CN</span>
+      </div>
+      <div class="calendar-grid" id="analytics-calendar-grid"></div>
+      <div class="calendar-actions">
+        <button class="app-prompt-secondary" type="button" onclick="selectAnalyticsDate(getTodayDateString())">Hôm nay</button>
+        <button class="app-alert-button app-prompt-primary" type="button" onclick="closeAnalyticsCalendar()">Xong</button>
+      </div>
     </div>
   </div>
 

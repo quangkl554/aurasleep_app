@@ -351,6 +351,126 @@ body {
   font-size: 12px;
 }
 
+.analytics-calendar-overlay {
+  place-items: end center;
+  padding: 18px;
+}
+
+.analytics-calendar-dialog {
+  width: min(100%, 398px);
+  padding: 12px 16px 16px;
+  border-radius: 30px;
+  text-align: left;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03)),
+    var(--bg-secondary);
+}
+
+.calendar-sheet-handle {
+  width: 42px;
+  height: 4px;
+  margin: 0 auto 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.calendar-header,
+.calendar-month-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.calendar-header {
+  margin-bottom: 14px;
+}
+
+.calendar-header h3 {
+  margin: 4px 0 0;
+}
+
+.calendar-header .icon-btn {
+  width: 36px;
+  height: 36px;
+}
+
+.calendar-month-row {
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.calendar-month-row strong {
+  flex: 1;
+  text-align: center;
+  font-size: 15px;
+}
+
+.calendar-weekdays,
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 7px;
+}
+
+.calendar-weekdays {
+  margin: 16px 2px 8px;
+}
+
+.calendar-weekdays span {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.calendar-day:active {
+  transform: scale(0.96);
+}
+
+.calendar-day.muted {
+  color: var(--text-secondary);
+  opacity: 0.45;
+}
+
+.calendar-day.today {
+  border-color: rgba(244, 162, 97, 0.45);
+}
+
+.calendar-day.selected {
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent-secondary), var(--accent-primary));
+  box-shadow: 0 10px 24px rgba(244, 162, 97, 0.24);
+}
+
+.calendar-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.calendar-actions .app-alert-button {
+  margin-top: 0;
+}
+
 .plan-current {
   cursor: default;
   opacity: 0.72;
@@ -505,8 +625,10 @@ p { font-size: 14px; line-height: 1.5; color: var(--text-secondary); }
   padding: 8px;
   margin-bottom: 14px;
   border: 1px solid var(--border);
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.06);
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)),
+    rgba(255, 255, 255, 0.045);
   color: var(--text-secondary);
 }
 
@@ -527,12 +649,12 @@ p { font-size: 14px; line-height: 1.5; color: var(--text-secondary); }
 }
 
 .date-step-btn {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  border-radius: 16px;
+  border-radius: 18px;
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-primary);
 }
@@ -544,12 +666,12 @@ p { font-size: 14px; line-height: 1.5; color: var(--text-secondary); }
   align-items: center;
   justify-content: center;
   gap: 10px;
-  min-height: 46px;
-  padding: 8px 12px;
-  border-radius: 18px;
+  min-height: 48px;
+  padding: 9px 14px;
+  border-radius: 20px;
   color: #fff;
   background: linear-gradient(135deg, var(--accent-secondary), var(--accent-primary));
-  box-shadow: 0 10px 22px rgba(244, 162, 97, 0.2);
+  box-shadow: 0 12px 24px rgba(244, 162, 97, 0.18);
 }
 
 .date-picker-button i {
@@ -715,11 +837,24 @@ p { font-size: 14px; line-height: 1.5; color: var(--text-secondary); }
   text-align: left;
   padding: 14px;
   border-radius: 18px;
+  min-height: 94px;
 }
 
 .analytics-stat-card .stat-val {
   font-size: 20px;
   color: var(--text-primary);
+}
+
+.analytics-stat-card .stat-title {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.stat-meta {
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.35;
 }
 
 .analytics-stat-card:first-child .stat-val {
