@@ -76,6 +76,7 @@ export async function saveSleepProfile(event) {
     sleepDataCache.clear();
     await loadDashboardData();
     await loadSleepData(document.querySelector('#analytics-tabs .auth-tab.active')?.dataset.tab || 'week');
+    closeSleepProfileModal();
     alert('Đã lưu hồ sơ giấc ngủ.');
   } catch (err) {
     alert(err.message);
@@ -85,6 +86,21 @@ export async function saveSleepProfile(event) {
       submitButton.textContent = originalText;
     }
   }
+}
+
+export function openSleepProfileModal() {
+  updateSleepProfileUi();
+  const overlay = document.getElementById('sleep-profile-modal');
+  if (!overlay) return;
+  overlay.classList.add('active');
+  overlay.setAttribute('aria-hidden', 'false');
+}
+
+export function closeSleepProfileModal() {
+  const overlay = document.getElementById('sleep-profile-modal');
+  if (!overlay) return;
+  overlay.classList.remove('active');
+  overlay.setAttribute('aria-hidden', 'true');
 }
 
 function updateSleepProfileUi() {
@@ -105,6 +121,8 @@ function updateSleepProfileUi() {
 }
 
 window.saveSleepProfile = saveSleepProfile;
+window.openSleepProfileModal = openSleepProfileModal;
+window.closeSleepProfileModal = closeSleepProfileModal;
 
 export function getTodayDateString() {
   const now = new Date();

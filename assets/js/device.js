@@ -314,17 +314,41 @@ async function fetchDeviceHistory() {
     if (!res.ok) return;
     const commands = await res.json();
     list.innerHTML = '';
+    if (!commands.length) {
+      list.innerHTML = '<div class="device-history-empty">Chưa có hoạt động đồng bộ. Hãy thử đổi độ sáng, nhiệt độ màu hoặc âm thanh.</div>';
+      return;
+    }
     commands.slice(0, 5).forEach(command => {
       const item = document.createElement('div');
       item.className = 'device-history-item';
-      item.innerHTML = '<span></span><strong></strong>';
+      item.innerHTML = '<span></span><strong></strong><small></small>';
       item.querySelector('span').textContent = new Date(command.createdAt || command.created_at).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-      item.querySelector('strong').textContent = command.command;
+      item.querySelector('strong').textContent = getDeviceCommandLabel(command.command);
+      item.querySelector('small').textContent = getDeviceCommandDetail(command);
       list.appendChild(item);
     });
   } catch (err) {
     console.warn('Không thể tải lịch sử thiết bị:', err.message);
   }
+}
+
+function getDeviceCommandLabel(command) {
+  const labels = {
+    update_settings: 'Cập nhật cài đặt',
+    sleep_mode: 'Bật chế độ ngủ'
+  };
+  return labels[command] || 'Đồng bộ thiết bị';
+}
+
+function getDeviceCommandDetail(command) {
+  const payload = command.payload || {};
+  const details = [];
+  if (payload.lightIntensity !== undefined) details.push(`Đèn ${payload.lightIntensity}%`);
+  if (payload.colorTemp !== undefined) details.push(`${payload.colorTemp}K`);
+  if (payload.activeSound !== undefined) details.push(payload.activeSound ? `Âm thanh ${payload.activeSound}` : 'Tắt âm thanh');
+  if (payload.soundVolume !== undefined) details.push(`Âm lượng ${payload.soundVolume}%`);
+  if (command.command === 'sleep_mode') details.push('Giảm sáng trong 30 phút');
+  return details.filter(Boolean).join(' · ') || 'Đã gửi từ app';
 }
 
 export async function activateRoutine(btn) {

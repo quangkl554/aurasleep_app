@@ -214,11 +214,12 @@
       <div class="glass-panel device-history-card">
         <div class="profile-card-header">
           <div>
-            <span class="chart-kicker">Realtime giả lập</span>
-            <h3>Lịch sử lệnh thiết bị</h3>
+            <span class="chart-kicker">Đồng bộ thiết bị</span>
+            <h3>Hoạt động gần đây</h3>
           </div>
-          <span class="premium-pill">Simulated</span>
+          <span class="premium-pill">Tự động lưu</span>
         </div>
+        <p class="device-history-copy">Mỗi lần bạn đổi đèn, nhiệt độ màu hoặc âm thanh, AuraSleep lưu lại một bản ghi đồng bộ tại đây.</p>
         <div id="device-history-list" class="device-history-list"></div>
       </div>
 
@@ -335,7 +336,6 @@
       <div class="glass-panel analytics-chart-panel mb-4" id="sleep-chart">
         <div class="chart-header">
           <div>
-            <span class="chart-kicker">Dữ liệu thật</span>
             <h3>Thời lượng ngủ</h3>
           </div>
           <span id="chart-range-label">7 ngày gần nhất</span>
@@ -565,7 +565,7 @@
         <div id="profile-plan-badge" style="background: rgba(244,162,97,0.2); color: var(--accent-primary); padding: 4px 12px; border-radius: 100px; font-size: 12px; font-weight: 600;">Free Member</div>
       </div>
 
-      <div class="glass-panel sleep-profile-card">
+      <a href="#" class="glass-panel sleep-profile-card sleep-profile-summary" onclick="openSleepProfileModal(); return false;">
         <div class="profile-card-header">
           <div>
             <span class="chart-kicker">Hồ sơ giấc ngủ</span>
@@ -577,50 +577,11 @@
             <small id="profile-wake-time">06:30</small>
           </div>
         </div>
-        <form id="sleep-profile-form" class="sleep-profile-form" onsubmit="saveSleepProfile(event)">
-          <label>
-            <span>Mục tiêu ngủ</span>
-            <select class="form-input" name="targetSleepMin">
-              <option value="420">7 giờ</option>
-              <option value="450">7 giờ 30 phút</option>
-              <option value="480">8 giờ</option>
-              <option value="510">8 giờ 30 phút</option>
-              <option value="540">9 giờ</option>
-            </select>
-          </label>
-          <label>
-            <span>Giờ ngủ mong muốn</span>
-            <input class="form-input" type="time" name="preferredBedtime" value="22:30">
-          </label>
-          <label>
-            <span>Giờ thức dậy</span>
-            <input class="form-input" type="time" name="preferredWakeTime" value="06:30">
-          </label>
-          <label>
-            <span>Chronotype</span>
-            <select class="form-input" name="chronotype">
-              <option value="morning">Dễ dậy sớm</option>
-              <option value="balanced">Cân bằng</option>
-              <option value="night">Thức khuya</option>
-            </select>
-          </label>
-          <label>
-            <span>Ngưng caffeine</span>
-            <input class="form-input" type="time" name="caffeineCutoff" value="14:00">
-          </label>
-          <label>
-            <span>Giảm màn hình trước ngủ</span>
-            <input class="form-input" type="number" name="screenCutoffMin" min="0" max="180" value="60">
-          </label>
-          <label>
-            <span>Nhắc thư giãn trước</span>
-            <input class="form-input" type="number" name="relaxReminderMin" min="0" max="120" value="30">
-          </label>
-          <button class="btn btn-primary" type="submit">
-            <i class="fa-solid fa-floppy-disk" style="margin-right: 8px;"></i> Lưu hồ sơ
-          </button>
-        </form>
-      </div>
+        <div class="sleep-profile-open">
+          <span>Xem và chỉnh sửa</span>
+          <i class="fa-solid fa-chevron-right"></i>
+        </div>
+      </a>
 
       <div class="glass-panel" style="overflow: hidden; margin-bottom: 24px;">
         <div class="menu-item" style="border-bottom: 1px solid var(--border);">
@@ -1018,6 +979,67 @@
       </div>
       <div id="profile-info-list" class="profile-info-list"></div>
     </div>
+  </div>
+
+  <div id="sleep-profile-modal" class="app-alert-overlay sleep-profile-overlay" aria-hidden="true">
+    <form class="app-alert-dialog sleep-profile-dialog" id="sleep-profile-form" onsubmit="saveSleepProfile(event)">
+      <div class="profile-info-header">
+        <div class="profile-info-icon">
+          <i class="fa-solid fa-moon"></i>
+        </div>
+        <button class="icon-btn" type="button" onclick="closeSleepProfileModal()" aria-label="Đóng hồ sơ giấc ngủ">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="app-alert-content">
+        <h3>Hồ sơ giấc ngủ</h3>
+        <p>Chỉnh mục tiêu và thói quen cá nhân để dashboard, phân tích và khuyến nghị dùng đúng dữ liệu của bạn.</p>
+      </div>
+      <div class="sleep-profile-form">
+        <label>
+          <span>Mục tiêu ngủ</span>
+          <select class="form-input" name="targetSleepMin">
+            <option value="420">7 giờ</option>
+            <option value="450">7 giờ 30 phút</option>
+            <option value="480">8 giờ</option>
+            <option value="510">8 giờ 30 phút</option>
+            <option value="540">9 giờ</option>
+          </select>
+        </label>
+        <label>
+          <span>Giờ ngủ mong muốn</span>
+          <input class="form-input" type="time" name="preferredBedtime" value="22:30">
+        </label>
+        <label>
+          <span>Giờ thức dậy</span>
+          <input class="form-input" type="time" name="preferredWakeTime" value="06:30">
+        </label>
+        <label>
+          <span>Chronotype</span>
+          <select class="form-input" name="chronotype">
+            <option value="morning">Dễ dậy sớm</option>
+            <option value="balanced">Cân bằng</option>
+            <option value="night">Thức khuya</option>
+          </select>
+        </label>
+        <label>
+          <span>Ngưng caffeine</span>
+          <input class="form-input" type="time" name="caffeineCutoff" value="14:00">
+        </label>
+        <label>
+          <span>Giảm màn hình trước ngủ</span>
+          <input class="form-input" type="number" name="screenCutoffMin" min="0" max="180" value="60">
+        </label>
+        <label>
+          <span>Nhắc thư giãn trước</span>
+          <input class="form-input" type="number" name="relaxReminderMin" min="0" max="120" value="30">
+        </label>
+      </div>
+      <div class="app-prompt-actions">
+        <button class="app-prompt-secondary" type="button" onclick="closeSleepProfileModal()">Hủy</button>
+        <button class="app-alert-button app-prompt-primary" type="submit">Lưu hồ sơ</button>
+      </div>
+    </form>
   </div>
 
   <div id="analytics-calendar-modal" class="app-alert-overlay analytics-calendar-overlay" aria-hidden="true">
