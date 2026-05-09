@@ -6,6 +6,39 @@ let appPromptResolver = null;
 let appConfirmResolver = null;
 const nativeAlert = window.alert.bind(window);
 
+const profileInfoContent = {
+  security: {
+    icon: 'fa-solid fa-shield-halved',
+    title: 'Bảo mật & Quyền riêng tư',
+    description: 'Các thiết lập tạm để bạn thay bằng chính sách thật sau khi hoàn thiện hệ thống tài khoản.',
+    items: [
+      ['Đăng nhập an toàn', 'Tài khoản đang dùng xác thực bằng email hoặc số điện thoại và mật khẩu. Phiên đăng nhập được lưu bằng token bảo mật.'],
+      ['Dữ liệu giấc ngủ', 'Dữ liệu ghi nhận giấc ngủ chỉ dùng để tạo dashboard, biểu đồ phân tích và gợi ý cá nhân trong AuraSleep.'],
+      ['Quyền riêng tư', 'AuraSleep không hiển thị dữ liệu cá nhân cho người dùng khác. Nội dung này có thể thay bằng điều khoản chính thức của bạn.']
+    ]
+  },
+  support: {
+    icon: 'fa-regular fa-circle-question',
+    title: 'Trung tâm hỗ trợ',
+    description: 'Khu vực hỗ trợ mẫu cho các câu hỏi thường gặp, kết nối thiết bị và vấn đề tài khoản.',
+    items: [
+      ['Kết nối thiết bị', 'Nếu đèn không phản hồi, hãy kiểm tra nguồn, Bluetooth/Wi-Fi và mở lại màn hình Thiết bị để đồng bộ.'],
+      ['Ghi nhận giấc ngủ', 'Vào Trang chủ, chọn Ghi nhận, nhập giờ ngủ và giờ thức dậy để cập nhật dashboard.'],
+      ['Liên hệ hỗ trợ', 'Email hỗ trợ mẫu: support@aurasleep.vn. Bạn có thể thay bằng kênh CSKH thật sau.']
+    ]
+  },
+  terms: {
+    icon: 'fa-solid fa-file-contract',
+    title: 'Điều khoản sử dụng',
+    description: 'Bản tóm tắt tạm thời để app có nội dung hoàn chỉnh trước khi bạn import điều khoản pháp lý thật.',
+    items: [
+      ['Mục đích sử dụng', 'AuraSleep hỗ trợ theo dõi thói quen ngủ, điều khiển ánh sáng, âm thanh và routine thư giãn.'],
+      ['Giới hạn tư vấn', 'AuraBot cung cấp gợi ý sinh hoạt và không thay thế tư vấn y tế chuyên môn.'],
+      ['Thanh toán & gói dịch vụ', 'Các gói nâng cấp, giá và quyền lợi có thể thay đổi theo chính sách kinh doanh chính thức.']
+    ]
+  }
+};
+
 export function showAppAlert(message, title = 'AuraSleep') {
   const overlay = document.getElementById('app-alert');
   const titleEl = document.getElementById('app-alert-title');
@@ -125,6 +158,42 @@ export function resolveAppConfirm(value) {
 }
 
 window.resolveAppConfirm = resolveAppConfirm;
+
+export function openProfileInfo(type) {
+  const content = profileInfoContent[type] || profileInfoContent.security;
+  const overlay = document.getElementById('profile-info-modal');
+  const icon = document.getElementById('profile-info-icon');
+  const title = document.getElementById('profile-info-title');
+  const description = document.getElementById('profile-info-description');
+  const list = document.getElementById('profile-info-list');
+  if (!overlay || !icon || !title || !description || !list) return;
+
+  icon.innerHTML = `<i class="${content.icon}"></i>`;
+  title.textContent = content.title;
+  description.textContent = content.description;
+  list.innerHTML = '';
+  content.items.forEach(([itemTitle, itemCopy]) => {
+    const item = document.createElement('div');
+    item.className = 'profile-info-item';
+    item.innerHTML = '<h4></h4><p></p>';
+    item.querySelector('h4').textContent = itemTitle;
+    item.querySelector('p').textContent = itemCopy;
+    list.appendChild(item);
+  });
+
+  overlay.classList.add('active');
+  overlay.setAttribute('aria-hidden', 'false');
+}
+
+export function closeProfileInfo() {
+  const overlay = document.getElementById('profile-info-modal');
+  if (!overlay) return;
+  overlay.classList.remove('active');
+  overlay.setAttribute('aria-hidden', 'true');
+}
+
+window.openProfileInfo = openProfileInfo;
+window.closeProfileInfo = closeProfileInfo;
 
 export function toggleTheme() {
   const htmlEl = document.documentElement;

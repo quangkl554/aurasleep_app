@@ -462,17 +462,17 @@
       </div>
 
       <div class="glass-panel" style="overflow: hidden; margin-bottom: 24px;">
-        <a href="#" class="menu-item" style="border-bottom: 1px solid var(--border);" onclick="alert('Đang mở cài đặt Bảo mật...')">
+        <a href="#" class="menu-item" style="border-bottom: 1px solid var(--border);" onclick="openProfileInfo('security'); return false;">
           <div class="menu-icon"><i class="fa-solid fa-shield-halved"></i></div>
           <div class="menu-text">Bảo mật & Quyền riêng tư</div>
           <i class="fa-solid fa-chevron-right menu-arrow"></i>
         </a>
-        <a href="#" class="menu-item" style="border-bottom: 1px solid var(--border);" onclick="alert('Kết nối CSKH 24/7...')">
+        <a href="#" class="menu-item" style="border-bottom: 1px solid var(--border);" onclick="openProfileInfo('support'); return false;">
           <div class="menu-icon"><i class="fa-regular fa-circle-question"></i></div>
           <div class="menu-text">Trung tâm hỗ trợ</div>
           <i class="fa-solid fa-chevron-right menu-arrow"></i>
         </a>
-        <a href="#" class="menu-item" onclick="alert('Mở Điều khoản sử dụng...')">
+        <a href="#" class="menu-item" onclick="openProfileInfo('terms'); return false;">
           <div class="menu-icon"><i class="fa-solid fa-file-contract"></i></div>
           <div class="menu-text">Điều khoản sử dụng</div>
           <i class="fa-solid fa-chevron-right menu-arrow"></i>
@@ -774,6 +774,24 @@
         </button>
       </div>
       <div id="notification-history-list" class="notification-history-list"></div>
+    </div>
+  </div>
+
+  <div id="profile-info-modal" class="app-alert-overlay profile-info-overlay" aria-hidden="true">
+    <div class="app-alert-dialog profile-info-dialog" role="dialog" aria-modal="true" aria-labelledby="profile-info-title">
+      <div class="profile-info-header">
+        <div class="profile-info-icon" id="profile-info-icon">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <button class="icon-btn" type="button" onclick="closeProfileInfo()" aria-label="Đóng">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="app-alert-content">
+        <h3 id="profile-info-title">Thông tin</h3>
+        <p id="profile-info-description"></p>
+      </div>
+      <div id="profile-info-list" class="profile-info-list"></div>
     </div>
   </div>
 
