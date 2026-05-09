@@ -163,6 +163,10 @@
           <div class="action-icon"><i class="fa-solid fa-book-open"></i></div>
           <span>Kiến thức</span>
         </div>
+        <div class="action-btn" onclick="openSleepProfileModal()">
+          <div class="action-icon"><i class="fa-solid fa-user-clock"></i></div>
+          <span>Hồ sơ ngủ</span>
+        </div>
       </div>
 
       <div class="glass-panel ai-card">
@@ -211,16 +215,21 @@
         <input type="range" min="2700" max="6500" value="3200" id="temp-slider" style="background: linear-gradient(to right, #ff8c00, #fefcf3, #e0f2fe);">
       </div>
 
-      <div class="glass-panel device-history-card">
-        <div class="profile-card-header">
+      <div class="glass-panel device-history-card is-collapsed" id="device-history-card">
+        <button class="device-history-toggle" type="button" onclick="toggleDeviceHistory()" aria-expanded="false">
           <div>
             <span class="chart-kicker">Đồng bộ thiết bị</span>
             <h3>Hoạt động gần đây</h3>
           </div>
-          <span class="premium-pill">Tự động lưu</span>
+          <span class="device-history-toggle-meta">
+            <small>Tự động lưu</small>
+            <i class="fa-solid fa-chevron-down"></i>
+          </span>
+        </button>
+        <div class="device-history-body">
+          <p class="device-history-copy">Mỗi lần bạn đổi đèn, nhiệt độ màu hoặc âm thanh, AuraSleep lưu lại một bản ghi đồng bộ tại đây.</p>
+          <div id="device-history-list" class="device-history-list"></div>
         </div>
-        <p class="device-history-copy">Mỗi lần bạn đổi đèn, nhiệt độ màu hoặc âm thanh, AuraSleep lưu lại một bản ghi đồng bộ tại đây.</p>
-        <div id="device-history-list" class="device-history-list"></div>
       </div>
 
       <div class="section-title">
@@ -564,24 +573,6 @@
         <h2>AURASLEEP</h2>
         <div id="profile-plan-badge" style="background: rgba(244,162,97,0.2); color: var(--accent-primary); padding: 4px 12px; border-radius: 100px; font-size: 12px; font-weight: 600;">Free Member</div>
       </div>
-
-      <a href="#" class="glass-panel sleep-profile-card sleep-profile-summary" onclick="openSleepProfileModal(); return false;">
-        <div class="profile-card-header">
-          <div>
-            <span class="chart-kicker">Hồ sơ giấc ngủ</span>
-            <h3>Mục tiêu cá nhân</h3>
-          </div>
-          <div class="profile-mini-stats">
-            <span id="profile-target-sleep">8h 0m</span>
-            <small id="profile-bedtime">22:30</small>
-            <small id="profile-wake-time">06:30</small>
-          </div>
-        </div>
-        <div class="sleep-profile-open">
-          <span>Xem và chỉnh sửa</span>
-          <i class="fa-solid fa-chevron-right"></i>
-        </div>
-      </a>
 
       <div class="glass-panel" style="overflow: hidden; margin-bottom: 24px;">
         <div class="menu-item" style="border-bottom: 1px solid var(--border);">

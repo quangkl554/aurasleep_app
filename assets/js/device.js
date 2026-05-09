@@ -132,6 +132,17 @@ export async function fetchDeviceData() {
 
 window.fetchDeviceData = fetchDeviceData;
 
+export function toggleDeviceHistory() {
+  const card = document.getElementById('device-history-card');
+  const button = card?.querySelector('.device-history-toggle');
+  if (!card || !button) return;
+  const willOpen = card.classList.contains('is-collapsed');
+  card.classList.toggle('is-collapsed', !willOpen);
+  button.setAttribute('aria-expanded', String(willOpen));
+}
+
+window.toggleDeviceHistory = toggleDeviceHistory;
+
 export function initDeviceControls() {
   const intensitySlider = document.getElementById('intensity-slider');
   const tempSlider = document.getElementById('temp-slider');
@@ -321,10 +332,16 @@ async function fetchDeviceHistory() {
     commands.slice(0, 5).forEach(command => {
       const item = document.createElement('div');
       item.className = 'device-history-item';
-      item.innerHTML = '<span></span><strong></strong><small></small>';
-      item.querySelector('span').textContent = new Date(command.createdAt || command.created_at).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+      item.innerHTML = '<div><strong></strong><small></small></div><time></time>';
       item.querySelector('strong').textContent = getDeviceCommandLabel(command.command);
       item.querySelector('small').textContent = getDeviceCommandDetail(command);
+      item.querySelector('time').textContent = new Date(command.createdAt || command.created_at).toLocaleString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
       list.appendChild(item);
     });
   } catch (err) {
