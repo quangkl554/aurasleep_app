@@ -248,7 +248,7 @@ router.put('/membership', auth, async (req, res) => {
         }
 
         const plan = req.body.plan === 'premium_monthly' ? 'premium_monthly' : 'free';
-        const price = plan === 'premium_monthly' ? 99000 : 0;
+        const price = plan === 'premium_monthly' ? 49000 : 0;
         const now = new Date();
         const endDate = new Date(now);
         endDate.setFullYear(endDate.getFullYear() + 1);

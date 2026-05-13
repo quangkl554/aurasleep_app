@@ -192,8 +192,8 @@ function switchBilling(element, type) {
   const priceEl = document.getElementById('premium-price');
   if (priceEl) {
     priceEl.innerHTML = type === 'year'
-      ? '799.000₫ <span>/năm</span>'
-      : '99.000₫ <span>/tháng</span>';
+      ? '588.000₫ <span>/năm</span>'
+      : '49.000₫ <span>/tháng</span>';
   }
 }
 
@@ -206,7 +206,7 @@ async function upgradePremium() {
 
   const activeBilling = document.querySelector('.sub-toggle.active');
   const planType = activeBilling?.textContent.includes('Năm') ? 'year' : 'month';
-  const amount = planType === 'year' ? 799000 : 99000;
+  const amount = planType === 'year' ? 588000 : 49000;
 
   try {
     const res = await apiFetch('/api/payment/create-url', {
