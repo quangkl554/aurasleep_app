@@ -5,8 +5,8 @@ const crypto = require('crypto');
 const { trackActivity, trackPaymentEvent } = require('../utils/tracking');
 
 const allowedPlans = {
-    month: 99000,
-    year: 799000
+    month: 49000,
+    year: 588000
 };
 
 function getRequiredPaymentConfig() {
