@@ -13,8 +13,11 @@ const ChatMessage = sequelize.define('ChatMessage', {
         field: 'session_id'
     },
     role: {
-        type: DataTypes.ENUM('user', 'bot'),
-        allowNull: false
+        type: DataTypes.STRING(20),
+        allowNull: false,
+        validate: {
+            isIn: [['user', 'bot', 'assistant']]
+        }
     },
     content: {
         type: DataTypes.TEXT,

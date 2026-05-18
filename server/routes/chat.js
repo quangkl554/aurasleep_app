@@ -8,6 +8,26 @@ const { Op } = require('sequelize');
 const GROQ_API_URL = process.env.GROQ_API_URL || 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
+function toApiRole(role) {
+    return role === 'bot' || role === 'assistant' ? 'assistant' : 'user';
+}
+
+async function saveBotMessage(sessionId, content) {
+    let lastError = null;
+
+    for (const role of ['bot', 'assistant']) {
+        try {
+            return await ChatMessage.create({ sessionId, role, content });
+        } catch (err) {
+            lastError = err;
+            console.warn(`Chat bot message save failed with role=${role}:`, err.message);
+        }
+    }
+
+    console.warn('AuraBot reply returned without persisted bot message:', lastError?.message);
+    return null;
+}
+
 function buildFallbackReply(message) {
     const text = String(message || '').toLowerCase();
 
@@ -120,7 +140,7 @@ router.post('/send', auth, async (req, res) => {
         });
 
         const formattedHistory = recentHistory.reverse().map((msg) => ({
-            role: msg.role === 'bot' ? 'assistant' : 'user',
+            role: toApiRole(msg.role),
             content: msg.content
         }));
 
@@ -176,11 +196,7 @@ router.post('/send', auth, async (req, res) => {
             }
         }
 
-        await ChatMessage.create({
-            sessionId: currentSessionId,
-            role: 'bot',
-            content: botReply
-        });
+        const persistedBotMessage = await saveBotMessage(currentSessionId, botReply);
 
         await trackActivity(req, {
             userId: req.user.id,
@@ -190,13 +206,15 @@ router.post('/send', auth, async (req, res) => {
             metadata: {
                 model: aiMode === 'groq' ? GROQ_MODEL : aiMode,
                 messageLength: message.trim().length,
-                replyLength: botReply.length
+                replyLength: botReply.length,
+                replyPersisted: Boolean(persistedBotMessage)
             }
         });
 
         res.json({
             sessionId: currentSessionId,
-            reply: botReply
+            reply: botReply,
+            aiMode
         });
     } catch (err) {
         console.error('Chat error:', err.message);
