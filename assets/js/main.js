@@ -6,6 +6,7 @@ import { fetchDeviceData, fetchRoutines, initDeviceControls, initSoundGrid } fro
 import './chat.js';
 
 let calendarCursorDate = null;
+let activeCalendarPicker = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Load theme
@@ -85,14 +86,39 @@ function reloadActiveAnalytics() {
   loadSleepData(activeRange);
 }
 
-function openAnalyticsDatePicker() {
-  const input = document.getElementById('analytics-date-input');
-  if (!input) return;
-  calendarCursorDate = new Date(`${input.value || getTodayDateString()}T00:00:00`);
+function openCalendarPicker({ input, title = 'Lịch phân tích', kicker = 'Chọn ngày', onSelect = null, closeOnSelect = true } = {}) {
+  const targetInput = typeof input === 'string' ? document.querySelector(input) : input;
+  if (!targetInput) return;
+
+  activeCalendarPicker = {
+    input: targetInput,
+    onSelect: typeof onSelect === 'function' ? onSelect : null,
+    closeOnSelect
+  };
+
+  const titleEl = document.getElementById('analytics-calendar-title');
+  const kickerEl = document.querySelector('#analytics-calendar-modal .calendar-header .chart-kicker');
+  if (titleEl) titleEl.textContent = title;
+  if (kickerEl) kickerEl.textContent = kicker;
+
+  calendarCursorDate = new Date(`${targetInput.value || getTodayDateString()}T00:00:00`);
   renderAnalyticsCalendar();
   const modal = document.getElementById('analytics-calendar-modal');
   modal?.classList.add('active');
   modal?.setAttribute('aria-hidden', 'false');
+}
+
+function openAnalyticsDatePicker() {
+  const input = document.getElementById('analytics-date-input');
+  openCalendarPicker({
+    input,
+    title: 'Lịch phân tích',
+    kicker: 'Chọn ngày',
+    onSelect: () => {
+      updateAnalyticsDateLabel();
+      reloadActiveAnalytics();
+    }
+  });
 }
 
 function shiftAnalyticsDate(days) {
@@ -116,20 +142,24 @@ function closeAnalyticsCalendar() {
 }
 
 function shiftCalendarMonth(months) {
-  const input = document.getElementById('analytics-date-input');
+  const input = activeCalendarPicker?.input || document.getElementById('analytics-date-input');
   const base = calendarCursorDate || new Date(`${input?.value || getTodayDateString()}T00:00:00`);
   calendarCursorDate = new Date(base.getFullYear(), base.getMonth() + months, 1);
   renderAnalyticsCalendar();
 }
 
 function selectAnalyticsDate(dateString) {
-  const input = document.getElementById('analytics-date-input');
+  const input = activeCalendarPicker?.input || document.getElementById('analytics-date-input');
   if (!input) return;
   input.value = dateString;
   calendarCursorDate = new Date(`${dateString}T00:00:00`);
-  updateAnalyticsDateLabel();
-  reloadActiveAnalytics();
-  closeAnalyticsCalendar();
+  if (activeCalendarPicker?.onSelect) {
+    activeCalendarPicker.onSelect(dateString, input);
+  } else {
+    updateAnalyticsDateLabel();
+    reloadActiveAnalytics();
+  }
+  if (activeCalendarPicker?.closeOnSelect !== false) closeAnalyticsCalendar();
 }
 
 function toDateInputValue(date) {
@@ -139,7 +169,7 @@ function toDateInputValue(date) {
 function renderAnalyticsCalendar() {
   const grid = document.getElementById('analytics-calendar-grid');
   const label = document.getElementById('calendar-month-label');
-  const input = document.getElementById('analytics-date-input');
+  const input = activeCalendarPicker?.input || document.getElementById('analytics-date-input');
   if (!grid || !label || !input) return;
 
   const selectedValue = input.value || getTodayDateString();
@@ -170,6 +200,7 @@ function renderAnalyticsCalendar() {
 }
 
 window.closeAnalyticsCalendar = closeAnalyticsCalendar;
+window.openCalendarPicker = openCalendarPicker;
 window.shiftCalendarMonth = shiftCalendarMonth;
 window.selectAnalyticsDate = selectAnalyticsDate;
 window.getTodayDateString = getTodayDateString;

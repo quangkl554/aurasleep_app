@@ -165,17 +165,46 @@ export function formatDateOnly(dateString) {
   return `${day}/${month}/${year}`;
 }
 
+function formatEntryDateLabel(dateString) {
+  const date = new Date(`${dateString}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return '--/--/----';
+  return date.toLocaleDateString('vi-VN', {
+    weekday: 'short',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+}
+
+function updateSleepEntryDateLabel(dateString) {
+  const label = document.getElementById('sleep-entry-date-label');
+  if (label) label.textContent = formatEntryDateLabel(dateString);
+}
+
 export function openSleepEntryModal() {
   const overlay = document.getElementById('sleep-entry-modal');
   const form = overlay?.querySelector('form');
   if (!overlay || !form) return;
   form.reset();
   form.elements.date.value = getTodayDateString();
+  updateSleepEntryDateLabel(form.elements.date.value);
   form.elements.bedtime.value = sleepProfile.preferredBedtime || '22:30';
   form.elements.wakeTime.value = sleepProfile.preferredWakeTime || '06:30';
   form.elements.fallAsleepMin.value = '15';
   overlay.classList.add('active');
   overlay.setAttribute('aria-hidden', 'false');
+}
+
+export function openSleepEntryDatePicker() {
+  const input = document.querySelector('#sleep-entry-modal [name="date"]');
+  if (!input || typeof window.openCalendarPicker !== 'function') return;
+
+  window.openCalendarPicker({
+    input,
+    title: 'Chọn ngày ngủ',
+    kicker: 'Ghi nhận giấc ngủ',
+    onSelect: (dateString) => updateSleepEntryDateLabel(dateString)
+  });
 }
 
 export function closeSleepEntryModal() {
@@ -186,6 +215,7 @@ export function closeSleepEntryModal() {
 }
 
 window.openSleepEntryModal = openSleepEntryModal;
+window.openSleepEntryDatePicker = openSleepEntryDatePicker;
 window.closeSleepEntryModal = closeSleepEntryModal;
 
 export async function submitSleepEntry(event) {
@@ -421,6 +451,22 @@ function formatMinutesShort(minutes) {
   return `${Math.round(minutes)}p`;
 }
 
+function getMonthInfo(dateString = getTodayDateString()) {
+  const [yearText, monthText] = String(dateString).split('-');
+  const year = Number(yearText) || new Date().getFullYear();
+  const month = Math.max(0, Math.min(11, (Number(monthText) || 1) - 1));
+  return {
+    year,
+    month,
+    daysInMonth: new Date(year, month + 1, 0).getDate()
+  };
+}
+
+function formatMonthCompact(dateString) {
+  const { year, month } = getMonthInfo(dateString);
+  return `Tháng ${month + 1}/${year}`;
+}
+
 function buildTodayChart(records) {
   const record = records[records.length - 1];
   if (!record) return [];
@@ -466,31 +512,32 @@ function buildWeekChart(records) {
   });
 }
 
-function buildMonthChart(records) {
-  const displayData = records.slice(-28);
-  const bucketCount = Math.min(4, Math.max(1, Math.ceil(displayData.length / 7)));
-  const buckets = Array.from({ length: bucketCount }, () => []);
-  displayData.forEach((record, index) => {
-    const bucketIndex = Math.min(bucketCount - 1, Math.floor(index / Math.ceil(displayData.length / bucketCount)));
-    buckets[bucketIndex].push(record);
-  });
-  const bucketAverages = buckets.map(bucket => Math.round(average(bucket, 'totalSleepMin')));
-  const maxMinutes = Math.max(540, ...bucketAverages);
+function buildMonthChart(records, selectedDate) {
+  const { year, month, daysInMonth } = getMonthInfo(selectedDate);
+  const recordByDate = new Map(records.map(record => [String(record.date).slice(0, 10), record]));
+  const maxMinutes = Math.max(540, ...records.map(record => Number(record.totalSleepMin) || 0));
+  const today = getTodayDateString();
 
-  return buckets.map((bucket, index) => {
-    const avgMinutes = bucketAverages[index] || 0;
-    const first = bucket[0]?.date ? formatShortDate(bucket[0].date) : '';
-    const last = bucket[bucket.length - 1]?.date ? formatShortDate(bucket[bucket.length - 1].date) : '';
+  return Array.from({ length: daysInMonth }, (_, index) => {
+    const day = index + 1;
+    const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const record = recordByDate.get(dateString);
+    const minutes = Number(record?.totalSleepMin) || 0;
+
     return {
-      label: `T${index + 1}`,
-      valueText: formatMinutesShort(avgMinutes),
-      height: Math.max(12, Math.min(100, (avgMinutes / maxMinutes) * 100)),
-      title: first && last ? `${first}-${last}` : `Tuần ${index + 1}`
+      label: String(day),
+      valueText: record ? formatMinutesShort(minutes) : '',
+      height: record ? Math.max(12, Math.min(100, (minutes / maxMinutes) * 100)) : 8,
+      title: record
+        ? `${formatDateOnly(dateString)} · ${formatSleepDuration(minutes)}`
+        : `${formatDateOnly(dateString)} · Chưa có dữ liệu`,
+      hasData: Boolean(record),
+      isToday: dateString === today
     };
   });
 }
 
-function getRangeCopy(range, recordCount) {
+function getRangeCopy(range, recordCount, selectedDate = getTodayDateString()) {
   if (range === 'today') {
     return {
       title: 'Tổng quan theo ngày',
@@ -501,9 +548,9 @@ function getRangeCopy(range, recordCount) {
   }
   if (range === 'month') {
     return {
-      title: 'Xu hướng theo tuần',
-      label: recordCount ? `${recordCount} bản ghi trong tháng` : '30 ngày gần nhất',
-      empty: 'Chưa có đủ dữ liệu tháng. Hãy ghi nhận thêm để AuraSleep gom xu hướng theo tuần.',
+      title: 'Tổng quan tháng',
+      label: recordCount ? `${formatMonthCompact(selectedDate)} · ${recordCount} bản ghi` : formatMonthCompact(selectedDate),
+      empty: 'Chưa có dữ liệu trong tháng này. Hãy ghi nhận giấc ngủ để xem từng ngày trong tháng.',
       noDataTitle: 'Chưa có dữ liệu tháng'
     };
   }
@@ -513,6 +560,118 @@ function getRangeCopy(range, recordCount) {
     empty: 'Chưa có dữ liệu. Hãy ghi nhận giấc ngủ để xem biểu đồ.',
     noDataTitle: 'Chưa có dữ liệu'
   };
+}
+
+function createChartContainer() {
+  const container = document.createElement('div');
+  container.className = 'chart-bar-container';
+  container.innerHTML = '<span class="chart-value"></span><div class="chart-bar"></div><span class="chart-label">--</span>';
+  return container;
+}
+
+function ensureChartContainers(count) {
+  const plot = document.querySelector('#sleep-chart .chart-plot');
+  if (!plot) return [];
+
+  const targetCount = Math.max(0, count);
+  let containers = Array.from(plot.querySelectorAll('.chart-bar-container'));
+  while (containers.length < targetCount) {
+    const container = createChartContainer();
+    plot.appendChild(container);
+    containers.push(container);
+  }
+  while (containers.length > targetCount) {
+    containers.pop().remove();
+  }
+
+  containers = Array.from(plot.querySelectorAll('.chart-bar-container'));
+  containers.forEach(container => {
+    container.onclick = () => selectBar(container);
+    container.setAttribute('role', 'button');
+    container.setAttribute('tabindex', '0');
+    container.onkeydown = (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        selectBar(container);
+      }
+    };
+  });
+  return containers;
+}
+
+function getDefaultActiveChartIndex(chartData, range) {
+  if (!chartData.length) return -1;
+  if (range !== 'month') return chartData.length - 1;
+
+  for (let index = chartData.length - 1; index >= 0; index -= 1) {
+    if (chartData[index].hasData) return index;
+  }
+  return Math.min(new Date().getDate() - 1, chartData.length - 1);
+}
+
+function renderChartItems(chartData, range) {
+  const expectedCount = range === 'month'
+    ? chartData.length
+    : range === 'today'
+      ? Math.max(4, chartData.length)
+      : 7;
+  const containers = ensureChartContainers(expectedCount);
+
+  containers.forEach((container, index) => {
+    const item = chartData[index];
+    const bar = container.querySelector('.chart-bar');
+    const value = container.querySelector('.chart-value');
+    const label = container.querySelector('.chart-label');
+
+    container.classList.remove('active', 'has-data', 'no-data', 'is-today');
+    container.style.visibility = item ? 'visible' : 'hidden';
+    container.removeAttribute('title');
+    container.removeAttribute('aria-label');
+
+    if (bar) {
+      bar.style.height = '10%';
+      bar.style.background = 'var(--border)';
+      bar.style.boxShadow = 'none';
+      bar.dataset.baseBackground = 'var(--border)';
+      bar.dataset.baseShadow = 'none';
+    }
+    if (value) {
+      value.textContent = '';
+      value.style.color = 'var(--text-secondary)';
+      value.style.fontWeight = '600';
+    }
+    if (label) label.textContent = '--';
+
+    if (!item) return;
+
+    const hasData = item.hasData !== false;
+    const baseBackground = range === 'month' && hasData
+      ? 'linear-gradient(135deg, var(--accent-secondary), var(--accent-primary))'
+      : 'var(--border)';
+    const baseShadow = range === 'month' && hasData
+      ? '0 8px 18px rgba(244,162,97,0.18)'
+      : 'none';
+
+    container.classList.toggle('has-data', hasData);
+    container.classList.toggle('no-data', !hasData);
+    container.classList.toggle('is-today', Boolean(item.isToday));
+    if (item.title) {
+      container.setAttribute('title', item.title);
+      container.setAttribute('aria-label', item.title);
+    }
+
+    if (bar) {
+      bar.style.height = `${item.height}%`;
+      bar.style.background = baseBackground;
+      bar.style.boxShadow = baseShadow;
+      bar.dataset.baseBackground = baseBackground;
+      bar.dataset.baseShadow = baseShadow;
+    }
+    if (value) value.textContent = item.valueText || '';
+    if (label) label.textContent = item.label;
+  });
+
+  return containers;
 }
 
 function getAnalyticsDate() {
@@ -617,36 +776,18 @@ export async function loadSleepData(range = 'week') {
       sleepDataCache.set(cacheKey, { data, timestamp: Date.now() });
     }
     
-    const bars = document.querySelectorAll('#sleep-chart .chart-bar');
-    const vals = document.querySelectorAll('#sleep-chart .chart-value');
-    const containers = document.querySelectorAll('#sleep-chart .chart-bar-container');
+    const plot = document.querySelector('#sleep-chart .chart-plot');
     const emptyState = document.getElementById('chart-empty-state');
     const rangeLabel = document.getElementById('chart-range-label');
     const chartTitle = document.querySelector('#sleep-chart .chart-header h3');
-    const rangeCopy = getRangeCopy(range, data?.length || 0);
+    const rangeCopy = getRangeCopy(range, data?.length || 0, selectedDate);
+    plot?.classList.toggle('month-chart', range === 'month');
     if (rangeLabel) rangeLabel.textContent = rangeCopy.label;
     if (chartTitle) chartTitle.textContent = rangeCopy.title;
     updateDayRings(null, false);
 
-    bars.forEach(bar => {
-      bar.style.height = '10%';
-      bar.style.background = 'var(--border)';
-      bar.style.boxShadow = 'none';
-    });
-    vals.forEach(val => {
-      val.textContent = '';
-      val.style.color = 'var(--text-secondary)';
-      val.style.fontWeight = '600';
-    });
-    containers.forEach(container => {
-      container.classList.remove('active');
-      container.style.visibility = 'visible';
-      const dayLabel = container.querySelector('.chart-label');
-      if (dayLabel) dayLabel.textContent = '--';
-      container.removeAttribute('title');
-    });
-
     if (!data || data.length === 0) {
+      renderChartItems(range === 'month' ? buildMonthChart([], selectedDate) : [], range);
       emptyState?.classList.add('visible');
       if (emptyState) emptyState.textContent = rangeCopy.empty;
       setStatCard('analytics-avg', 'Thời lượng', '--', 'Chưa có bản ghi');
@@ -670,23 +811,10 @@ export async function loadSleepData(range = 'week') {
     const chartData = range === 'today'
       ? buildTodayChart(data)
       : range === 'month'
-        ? buildMonthChart(data)
+        ? buildMonthChart(data, selectedDate)
         : buildWeekChart(data);
 
-    containers.forEach((container, index) => {
-      container.style.visibility = chartData[index] ? 'visible' : 'hidden';
-    });
-
-    chartData.forEach((item, index) => {
-      if (!bars[index]) return;
-      bars[index].style.height = item.height + '%';
-      
-      if (vals[index]) vals[index].textContent = item.valueText;
-      
-      const dayLabel = containers[index]?.querySelector('.chart-label');
-      if (dayLabel) dayLabel.textContent = item.label;
-      if (item.title && containers[index]) containers[index].setAttribute('title', item.title);
-    });
+    const containers = renderChartItems(chartData, range);
     updateDayRings(dayRecord, range === 'today');
 
     const avgSleep = Math.round(average(data, 'totalSleepMin'));
@@ -737,7 +865,7 @@ export async function loadSleepData(range = 'week') {
     setText('#analytics-screen .ai-card h4', trendTitle);
     setText('#analytics-screen .ai-card p', trendCopy);
 
-    const activeIndex = chartData.length - 1;
+    const activeIndex = getDefaultActiveChartIndex(chartData, range);
     if (containers[activeIndex]) selectBar(containers[activeIndex]);
   } catch (err) { 
     console.error('Lỗi tải dữ liệu giấc ngủ:', err);
@@ -753,8 +881,8 @@ export function selectBar(element) {
     const bar = c.querySelector('.chart-bar');
     const value = c.querySelector('.chart-value');
     if (bar) {
-      bar.style.background = 'var(--border)';
-      bar.style.boxShadow = 'none';
+      bar.style.background = bar.dataset.baseBackground || 'var(--border)';
+      bar.style.boxShadow = bar.dataset.baseShadow || 'none';
     }
     if (value) {
       value.style.color = 'var(--text-secondary)';

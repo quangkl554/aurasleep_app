@@ -1100,7 +1100,11 @@
       <div class="sleep-entry-grid">
         <label>
           <span>Ngày ngủ</span>
-          <input class="form-input" type="date" name="date" required>
+          <input type="hidden" name="date" required>
+          <button class="sleep-entry-date-button" type="button" onclick="openSleepEntryDatePicker()" aria-label="Chọn ngày ngủ">
+            <i class="fa-regular fa-calendar"></i>
+            <strong id="sleep-entry-date-label">--/--/----</strong>
+          </button>
         </label>
         <label>
           <span>Giờ đi ngủ</span>

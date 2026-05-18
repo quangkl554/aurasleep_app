@@ -356,6 +356,10 @@ body {
   padding: 18px;
 }
 
+.analytics-calendar-overlay.active {
+  z-index: 1100;
+}
+
 .analytics-calendar-dialog {
   width: min(100%, 398px);
   padding: 12px 16px 16px;
@@ -826,6 +830,85 @@ p { font-size: 14px; line-height: 1.5; color: var(--text-secondary); }
 
 .chart-empty-state.visible {
   display: grid;
+}
+
+.chart-plot.month-chart {
+  height: auto;
+  min-height: 246px;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  align-items: stretch;
+  justify-content: stretch;
+  gap: 7px;
+}
+
+.chart-plot.month-chart .chart-grid-line {
+  display: none;
+}
+
+.chart-plot.month-chart .chart-empty-state {
+  inset: 64px 14px 64px;
+}
+
+.month-chart .chart-bar-container {
+  width: auto;
+  height: 44px;
+  min-width: 0;
+  position: relative;
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding: 7px 6px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.month-chart .chart-bar-container:hover {
+  transform: translateY(-1px);
+}
+
+.month-chart .chart-bar-container.is-today {
+  border-color: rgba(244, 162, 97, 0.5);
+}
+
+.month-chart .chart-bar-container.active {
+  border-color: rgba(244, 162, 97, 0.72);
+  background: rgba(244, 162, 97, 0.12);
+}
+
+.month-chart .chart-bar-container.no-data {
+  opacity: 0.58;
+}
+
+.month-chart .chart-value {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  transform: none;
+  max-width: calc(100% - 10px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 7px;
+  line-height: 1;
+}
+
+.month-chart .chart-bar {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+  width: auto;
+  min-height: 4px;
+  max-height: 20px;
+  border-radius: 999px;
+}
+
+.month-chart .chart-label {
+  margin-top: 0;
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .analytics-stats-grid {
@@ -1551,6 +1634,45 @@ html[data-plan="free"] .premium-analytics-lock .premium-lock-overlay:hover {
 .sleep-entry-note .form-input {
   width: 100%;
   min-width: 0;
+}
+
+.sleep-entry-date-button {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
+}
+
+.sleep-entry-date-button i {
+  color: var(--accent-primary);
+  font-size: 15px;
+}
+
+.sleep-entry-date-button strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.sleep-entry-date-button:active {
+  transform: scale(0.98);
+}
+
+.sleep-entry-date-button:hover {
+  border-color: rgba(244, 162, 97, 0.35);
+  background: rgba(244, 162, 97, 0.1);
 }
 
 .sleep-entry-note {
