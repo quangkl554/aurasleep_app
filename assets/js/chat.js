@@ -43,14 +43,6 @@ function buildClientChatFallback(messageText) {
   ].join('\n');
 }
 
-function buildClientChatError() {
-  return [
-    'Mình chưa kết nối được AuraBot AI lúc này.',
-    '',
-    'Bạn thử gửi lại sau vài giây. Nếu lỗi vẫn lặp lại, hãy kiểm tra server API hoặc cấu hình Groq.'
-  ].join('\n');
-}
-
 export async function sendChatMessage() {
   const inputField = document.getElementById('chat-input-field');
   const messageText = inputField.value.trim();
@@ -92,21 +84,14 @@ export async function sendChatMessage() {
       const botMsg = document.createElement('div');
       botMsg.className = 'message bot';
       const serverReply = data.reply || 'AuraBot chưa có phản hồi.';
-      const replyText = data.aiMode && data.aiMode !== 'groq'
-        ? [
-            'AuraBot đang dùng phản hồi dự phòng vì chưa kết nối được AI chính.',
-            '',
-            serverReply
-          ].join('\n')
-        : serverReply;
-      appendMultilineText(botMsg, replyText);
+      appendMultilineText(botMsg, serverReply);
       chatMessages.appendChild(botMsg);
     } else {
       const errorText = await res.text().catch(() => '');
       console.warn('Chat API error:', res.status, errorText);
       const errorMsg = document.createElement('div');
       errorMsg.className = 'message bot';
-      appendMultilineText(errorMsg, buildClientChatError());
+      appendMultilineText(errorMsg, buildClientChatFallback(messageText));
       chatMessages.appendChild(errorMsg);
     }
   } catch (err) { 
@@ -114,7 +99,7 @@ export async function sendChatMessage() {
     if (loadingMsg.parentNode) chatMessages.removeChild(loadingMsg);
     const errorMsg = document.createElement('div');
     errorMsg.className = 'message bot';
-    appendMultilineText(errorMsg, buildClientChatError());
+    appendMultilineText(errorMsg, buildClientChatFallback(messageText));
     chatMessages.appendChild(errorMsg);
   }
   

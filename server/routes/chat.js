@@ -59,6 +59,14 @@ function buildFallbackReply(message) {
     ].join('\n');
 }
 
+function sendFallbackChatResponse(res, message, sessionId = null, aiMode = 'fallback_server_error') {
+    return res.json({
+        sessionId,
+        reply: buildFallbackReply(message),
+        aiMode
+    });
+}
+
 async function buildSleepContext(userId) {
     try {
         const endDate = new Date();
@@ -218,6 +226,10 @@ router.post('/send', auth, async (req, res) => {
         });
     } catch (err) {
         console.error('Chat error:', err.message);
+        const message = typeof req.body?.message === 'string' ? req.body.message : '';
+        if (message.trim()) {
+            return sendFallbackChatResponse(res, message);
+        }
         res.status(500).json({ message: 'Loi khi ket noi voi AI' });
     }
 });
