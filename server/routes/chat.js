@@ -13,6 +13,7 @@ function toApiRole(role) {
 }
 
 async function saveBotMessage(sessionId, content) {
+    if (!sessionId) return null;
     let lastError = null;
 
     for (const role of ['bot', 'assistant']) {
@@ -26,6 +27,56 @@ async function saveBotMessage(sessionId, content) {
 
     console.warn('AuraBot reply returned without persisted bot message:', lastError?.message);
     return null;
+}
+
+async function resolveChatSession(userId, sessionId, message) {
+    if (sessionId) {
+        try {
+            const existingSession = await ChatSession.findOne({
+                where: { id: sessionId, userId }
+            });
+
+            if (!existingSession) {
+                return { status: 'not_found', sessionId: null, history: [] };
+            }
+
+            const history = await ChatMessage.findAll({
+                where: { sessionId },
+                order: [['createdAt', 'DESC']],
+                limit: 10
+            });
+
+            return { status: 'ok', sessionId, history };
+        } catch (err) {
+            console.warn('Chat history unavailable, continuing without persistence:', err.message);
+            return { status: 'disabled', sessionId: null, history: [] };
+        }
+    }
+
+    try {
+        const newSession = await ChatSession.create({
+            userId,
+            title: message.trim().substring(0, 30)
+        });
+        return { status: 'ok', sessionId: newSession.id, history: [] };
+    } catch (err) {
+        console.warn('Chat session persistence unavailable, continuing without history:', err.message);
+        return { status: 'disabled', sessionId: null, history: [] };
+    }
+}
+
+async function saveUserMessage(sessionId, message) {
+    if (!sessionId) return null;
+    try {
+        return await ChatMessage.create({
+            sessionId,
+            role: 'user',
+            content: message.trim()
+        });
+    } catch (err) {
+        console.warn('Chat user message save skipped:', err.message);
+        return null;
+    }
 }
 
 function buildFallbackReply(message) {
@@ -117,35 +168,14 @@ router.post('/send', auth, async (req, res) => {
             return res.status(400).json({ message: 'Tin nhan khong hop le' });
         }
 
-        let currentSessionId = sessionId;
-
-        if (currentSessionId) {
-            const existingSession = await ChatSession.findOne({
-                where: { id: currentSessionId, userId: req.user.id }
-            });
-
-            if (!existingSession) {
-                return res.status(404).json({ message: 'Khong tim thay phien chat' });
-            }
-        } else {
-            const newSession = await ChatSession.create({
-                userId: req.user.id,
-                title: message.trim().substring(0, 30)
-            });
-            currentSessionId = newSession.id;
+        const sessionState = await resolveChatSession(req.user.id, sessionId, message);
+        if (sessionState.status === 'not_found') {
+            return res.status(404).json({ message: 'Khong tim thay phien chat' });
         }
 
-        await ChatMessage.create({
-            sessionId: currentSessionId,
-            role: 'user',
-            content: message.trim()
-        });
-
-        const recentHistory = await ChatMessage.findAll({
-            where: { sessionId: currentSessionId },
-            order: [['createdAt', 'DESC']],
-            limit: 10
-        });
+        const currentSessionId = sessionState.sessionId;
+        const recentHistory = sessionState.history || [];
+        await saveUserMessage(currentSessionId, message);
 
         const formattedHistory = recentHistory.reverse().map((msg) => ({
             role: toApiRole(msg.role),
@@ -165,7 +195,11 @@ router.post('/send', auth, async (req, res) => {
                     `Use this real user sleep context when relevant: ${sleepContext}`
                 ].join(' ')
             },
-            ...formattedHistory
+            ...formattedHistory,
+            {
+                role: 'user',
+                content: message.trim()
+            }
         ];
 
         let botReply = '';
@@ -206,18 +240,23 @@ router.post('/send', auth, async (req, res) => {
 
         const persistedBotMessage = await saveBotMessage(currentSessionId, botReply);
 
-        await trackActivity(req, {
-            userId: req.user.id,
-            eventType: 'chat_message_sent',
-            entityType: 'chat_session',
-            entityId: currentSessionId,
-            metadata: {
-                model: aiMode === 'groq' ? GROQ_MODEL : aiMode,
-                messageLength: message.trim().length,
-                replyLength: botReply.length,
-                replyPersisted: Boolean(persistedBotMessage)
-            }
-        });
+        try {
+            await trackActivity(req, {
+                userId: req.user.id,
+                eventType: 'chat_message_sent',
+                entityType: 'chat_session',
+                entityId: currentSessionId,
+                metadata: {
+                    model: aiMode === 'groq' ? GROQ_MODEL : aiMode,
+                    messageLength: message.trim().length,
+                    replyLength: botReply.length,
+                    replyPersisted: Boolean(persistedBotMessage),
+                    chatPersistence: sessionState.status
+                }
+            });
+        } catch (trackingErr) {
+            console.warn('Chat activity tracking skipped:', trackingErr.message);
+        }
 
         res.json({
             sessionId: currentSessionId,
