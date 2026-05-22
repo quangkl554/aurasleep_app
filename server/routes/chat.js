@@ -3,6 +3,7 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const { ChatSession, ChatMessage, SleepRecord, SleepProfile } = require('../models');
 const { trackActivity } = require('../utils/tracking');
+const { buildAuraBotMessages, sanitizeAuraBotReply } = require('../utils/aurabotContext');
 const { Op } = require('sequelize');
 
 const GROQ_API_URL = process.env.GROQ_API_URL || 'https://api.groq.com/openai/v1/chat/completions';
@@ -84,37 +85,34 @@ function buildFallbackReply(message) {
 
     if (text.includes('khó ngủ') || text.includes('kho ngu') || text.includes('mất ngủ') || text.includes('mat ngu')) {
         return [
-            'Tối nay bạn có thể thử routine 20-30 phút:',
-            '- Giảm ánh sáng màn hình và đèn phòng.',
-            '- Chọn âm thanh nhẹ như Mưa rào, Sóng biển hoặc Thiền sâu.',
-            '- Hít vào 4 giây, giữ 2 giây, thở ra 6 giây trong 5 phút.',
-            '- Nếu sau 20 phút vẫn tỉnh táo, rời giường một lúc và quay lại khi buồn ngủ.'
+            'Thử routine 20 phút tối nay:',
+            '- Giảm đèn và tắt thông báo.',
+            '- Bật Mưa rào hoặc Thiền sâu.',
+            '- Thở 4-2-6 trong 5 phút.'
         ].join('\n');
     }
 
     if (text.includes('âm thanh') || text.includes('am thanh') || text.includes('nhạc') || text.includes('nhac')) {
         return [
-            'Gợi ý âm thanh:',
-            '- Mưa rào: phù hợp khi cần che tiếng ồn bên ngoài.',
+            'Gợi ý nhanh:',
+            '- Mưa rào: che tiếng ồn tốt.',
             '- Sóng biển: nhịp đều, dễ thư giãn.',
-            '- Brown Noise hoặc Pink Noise: phù hợp khi cần âm nền ổn định.',
-            '- Thiền sâu hoặc Piano: phù hợp trước khi ngủ 15-30 phút.'
+            '- Brown Noise: hợp khi cần âm nền ổn định.'
         ].join('\n');
     }
 
     return [
-        'Bạn có thể bắt đầu bằng 3 việc đơn giản:',
-        '- Ghi nhận giấc ngủ tối qua để dashboard có dữ liệu thật.',
-        '- Chọn một routine thư giãn 30-45 phút.',
-        '- Giữ giờ ngủ/thức dậy ổn định trong vài ngày để AuraSleep phân tích chính xác hơn.'
+        'Mình có thể hỗ trợ 3 việc chính:',
+        '- Phân tích dữ liệu ngủ gần đây.',
+        '- Gợi ý routine thư giãn.',
+        '- Chọn âm thanh/ánh sáng phù hợp.'
     ].join('\n');
 }
 
-function sendFallbackChatResponse(res, message, sessionId = null, aiMode = 'fallback_server_error') {
+function sendFallbackChatResponse(res, message, sessionId = null) {
     return res.json({
         sessionId,
-        reply: buildFallbackReply(message),
-        aiMode
+        reply: buildFallbackReply(message)
     });
 }
 
@@ -183,24 +181,11 @@ router.post('/send', auth, async (req, res) => {
         }));
 
         const sleepContext = await buildSleepContext(req.user.id);
-        const apiMessages = [
-            {
-                role: 'system',
-                content: [
-                    'You are AuraBot, a sleep assistant inside AuraSleep.',
-                    'Use a calm, professional, empathetic tone.',
-                    'Give concise, practical sleep, routine, light, and sound suggestions.',
-                    'Answer in Vietnamese when the user writes Vietnamese.',
-                    'Do not diagnose disease or replace medical advice.',
-                    `Use this real user sleep context when relevant: ${sleepContext}`
-                ].join(' ')
-            },
-            ...formattedHistory,
-            {
-                role: 'user',
-                content: message.trim()
-            }
-        ];
+        const apiMessages = buildAuraBotMessages({
+            history: formattedHistory,
+            message,
+            sleepContext
+        });
 
         let botReply = '';
         let aiMode = 'groq';
@@ -219,13 +204,13 @@ router.post('/send', auth, async (req, res) => {
                     body: JSON.stringify({
                         model: GROQ_MODEL,
                         messages: apiMessages,
-                        temperature: 0.7,
-                        max_tokens: 500
+                        temperature: 0.45,
+                        max_tokens: 220
                     })
                 });
 
                 if (!response.ok) {
-                    const errorText = await response.text();
+                    const errorText = (await response.text()).slice(0, 240);
                     throw new Error(`Groq API error ${response.status}: ${errorText}`);
                 }
 
@@ -238,6 +223,7 @@ router.post('/send', auth, async (req, res) => {
             }
         }
 
+        botReply = sanitizeAuraBotReply(botReply, buildFallbackReply(message));
         const persistedBotMessage = await saveBotMessage(currentSessionId, botReply);
 
         try {
@@ -260,8 +246,7 @@ router.post('/send', auth, async (req, res) => {
 
         res.json({
             sessionId: currentSessionId,
-            reply: botReply,
-            aiMode
+            reply: botReply
         });
     } catch (err) {
         console.error('Chat error:', err.message);

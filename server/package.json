@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "db:sync": "node sync_db.js",
-    "check": "node --check server.js && node --check routes/auth.js && node --check routes/chat.js && node --check routes/device.js && node --check routes/payment.js && node --check routes/routine.js && node --check routes/sleep.js && node --check utils/tracking.js && node --check utils/notifications.js && node --check models/UserActivityEvent.js && node --check models/UserSession.js && node --check models/DeviceCommandHistory.js && node --check models/PaymentEvent.js && node --check models/SleepProfile.js && node --check models/Notification.js",
+    "check": "node --check server.js && node --check routes/auth.js && node --check routes/chat.js && node --check routes/device.js && node --check routes/payment.js && node --check routes/routine.js && node --check routes/sleep.js && node --check utils/tracking.js && node --check utils/notifications.js && node --check utils/aurabotContext.js && node --check models/UserActivityEvent.js && node --check models/UserSession.js && node --check models/DeviceCommandHistory.js && node --check models/PaymentEvent.js && node --check models/SleepProfile.js && node --check models/Notification.js",
     "test": "npm run check"
   },
   "keywords": [],

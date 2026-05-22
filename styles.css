@@ -2958,6 +2958,30 @@ input[type=range]::-webkit-slider-thumb {
   align-self: flex-start;
 }
 
+.message.bot.typing::after {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 1em;
+  margin-left: 3px;
+  border-radius: 999px;
+  background: var(--accent-primary);
+  vertical-align: -2px;
+  animation: typingCursor 0.8s steps(2, start) infinite;
+}
+
+.message.loading {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.message.loading::after {
+  content: '';
+  display: inline-block;
+  width: 18px;
+  animation: loadingDots 1.2s steps(4, end) infinite;
+}
+
 .message.user {
   background: var(--accent-primary);
   color: white;
@@ -2998,6 +3022,23 @@ input[type=range]::-webkit-slider-thumb {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+}
+
+.chat-send:disabled,
+.chat-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+@keyframes typingCursor {
+  50% { opacity: 0; }
+}
+
+@keyframes loadingDots {
+  0% { content: ''; }
+  25% { content: '.'; }
+  50% { content: '..'; }
+  75%, 100% { content: '...'; }
 }
 
 /* Login Screen */
