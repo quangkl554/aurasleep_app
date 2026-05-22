@@ -47,6 +47,61 @@ function getRangeWindow(range, selectedDate = null) {
     return { startDate, endDate };
 }
 
+function clampMetric(value, min = 0, max = 100) {
+    return Math.max(min, Math.min(max, value));
+}
+
+function getInBedMinutes(record) {
+    const bedDate = new Date(record.bedtime);
+    let wakeDate = new Date(record.wakeTime);
+    if (Number.isNaN(bedDate.getTime()) || Number.isNaN(wakeDate.getTime())) return null;
+    if (wakeDate <= bedDate) {
+        wakeDate = new Date(wakeDate);
+        wakeDate.setDate(wakeDate.getDate() + 1);
+    }
+    return Math.max(0, Math.round((wakeDate - bedDate) / 60000));
+}
+
+function calculateSleepEfficiency(totalSleepMin, inBedMin) {
+    return inBedMin > 0
+        ? Math.round(clampMetric((totalSleepMin / inBedMin) * 100))
+        : 0;
+}
+
+function calculateSleepScore({ totalSleepMin, efficiency, fallAsleepMin, targetSleepMin = 480 }) {
+    const safeTarget = Math.max(1, Number(targetSleepMin) || 480);
+    const durationRatio = clampMetric((Number(totalSleepMin) || 0) / safeTarget, 0, 1.25);
+    const durationScore = durationRatio <= 1
+        ? Math.pow(durationRatio, 1.35) * 100
+        : Math.max(72, 100 - (durationRatio - 1) * 70);
+    const latencyScore = clampMetric(100 - Math.max(0, (Number(fallAsleepMin) || 0) - 15) * 2.2);
+    let score = durationScore * 0.7 + (Number(efficiency) || 0) * 0.2 + latencyScore * 0.1;
+
+    if (durationRatio < 0.7) score = Math.min(score, 72);
+    if (durationRatio < 0.55) score = Math.min(score, 60);
+
+    return Math.round(clampMetric(score));
+}
+
+function normalizeSleepRecord(record, targetSleepMin = 480) {
+    const plain = typeof record.get === 'function' ? record.get({ plain: true }) : { ...record };
+    const fallAsleepMin = Math.max(0, Number(plain.fallAsleepMin) || 0);
+    const inBedMin = getInBedMinutes(plain);
+    const totalSleepMin = Number.isFinite(Number(plain.totalSleepMin))
+        ? Math.max(0, Number(plain.totalSleepMin))
+        : Math.max(0, (inBedMin || 0) - fallAsleepMin);
+    const efficiency = calculateSleepEfficiency(totalSleepMin, inBedMin || totalSleepMin + fallAsleepMin);
+    const sleepScore = calculateSleepScore({ totalSleepMin, efficiency, fallAsleepMin, targetSleepMin });
+
+    return {
+        ...plain,
+        totalSleepMin,
+        efficiency,
+        sleepScore,
+        fallAsleepMin
+    };
+}
+
 function average(records, field) {
     const values = records
         .map((record) => Number(record[field]))
@@ -129,15 +184,19 @@ router.get('/', auth, async (req, res) => {
             ? { [Op.gte]: startDate, [Op.lt]: endDate }
             : { [Op.gte]: startDate };
 
-        const records = await SleepRecord.findAll({
-            where: {
-                userId: req.user.id,
-                date: dateFilter
-            },
-            order: [['date', 'ASC']]
-        });
+        const [records, profile] = await Promise.all([
+            SleepRecord.findAll({
+                where: {
+                    userId: req.user.id,
+                    date: dateFilter
+                },
+                order: [['date', 'ASC']]
+            }),
+            getProfile(req.user.id)
+        ]);
+        const targetSleepMin = Number(profile.targetSleepMin) || 480;
 
-        res.json(records);
+        res.json(records.map((record) => normalizeSleepRecord(record, targetSleepMin)));
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Loi Server');
@@ -165,30 +224,31 @@ router.get('/report', auth, async (req, res) => {
         ]);
 
         const targetSleepMin = Number(profile.targetSleepMin) || 480;
-        const avgSleep = Math.round(average(records, 'totalSleepMin'));
-        const avgScore = Math.round(average(records, 'sleepScore'));
-        const avgLatency = Math.round(average(records, 'fallAsleepMin'));
-        const avgEfficiency = Math.round(average(records, 'efficiency'));
-        const totalSleep = records.reduce((sum, record) => sum + (Number(record.totalSleepMin) || 0), 0);
-        const sleepDebt = Math.max(0, targetSleepMin * records.length - totalSleep);
-        const daysAtGoal = records.filter((record) => (Number(record.totalSleepMin) || 0) >= targetSleepMin).length;
+        const normalizedRecords = records.map((record) => normalizeSleepRecord(record, targetSleepMin));
+        const avgSleep = Math.round(average(normalizedRecords, 'totalSleepMin'));
+        const avgScore = Math.round(average(normalizedRecords, 'sleepScore'));
+        const avgLatency = Math.round(average(normalizedRecords, 'fallAsleepMin'));
+        const avgEfficiency = Math.round(average(normalizedRecords, 'efficiency'));
+        const totalSleep = normalizedRecords.reduce((sum, record) => sum + (Number(record.totalSleepMin) || 0), 0);
+        const sleepDebt = Math.max(0, targetSleepMin * normalizedRecords.length - totalSleep);
+        const daysAtGoal = normalizedRecords.filter((record) => (Number(record.totalSleepMin) || 0) >= targetSleepMin).length;
         const bedtimeStd = Math.round(standardDeviation(minutesBetweenBedtimes(records)));
         const consistencyScore = Math.max(0, Math.min(100, Math.round(100 - (bedtimeStd / 90) * 100)));
-        const bestNight = records.reduce((best, record) => !best || (record.sleepScore || 0) > (best.sleepScore || 0) ? record : best, null);
-        const worstNight = records.reduce((worst, record) => !worst || (record.sleepScore || 0) < (worst.sleepScore || 0) ? record : worst, null);
-        const factorInsights = buildFactorInsights(records);
+        const bestNight = normalizedRecords.reduce((best, record) => !best || (record.sleepScore || 0) > (best.sleepScore || 0) ? record : best, null);
+        const worstNight = normalizedRecords.reduce((worst, record) => !worst || (record.sleepScore || 0) < (worst.sleepScore || 0) ? record : worst, null);
+        const factorInsights = buildFactorInsights(normalizedRecords);
 
         res.json({
             range,
             selectedDate,
             targetSleepMin,
-            recordCount: records.length,
+            recordCount: normalizedRecords.length,
             avgSleep,
             avgScore,
             avgLatency,
             avgEfficiency,
             sleepDebt,
-            goalRate: records.length ? Math.round((daysAtGoal / records.length) * 100) : 0,
+            goalRate: normalizedRecords.length ? Math.round((daysAtGoal / normalizedRecords.length) * 100) : 0,
             consistencyScore,
             bedtimeStd,
             bestNight,
@@ -207,26 +267,30 @@ router.get('/report', auth, async (req, res) => {
 // @access  Private
 router.post('/', auth, async (req, res) => {
     try {
-        const { date, bedtime, wakeTime, totalSleepMin, sleepScore, efficiency, fallAsleepMin, notes } = req.body;
+        const { date, bedtime, wakeTime, fallAsleepMin, notes } = req.body;
         const factors = Array.isArray(req.body.factors)
             ? req.body.factors.filter((factor) => typeof factor === 'string' && allowedFactors.has(factor)).slice(0, 8)
             : [];
 
-        if (!date || !bedtime || !wakeTime || !Number.isInteger(totalSleepMin)) {
+        if (!date || !bedtime || !wakeTime) {
             return res.status(400).json({ message: 'Du lieu giac ngu khong hop le' });
         }
 
-        if (totalSleepMin < 60 || totalSleepMin > 900) {
+        const profile = await getProfile(req.user.id);
+        const targetSleepMin = Number(profile.targetSleepMin) || 480;
+        const calculated = normalizeSleepRecord({ bedtime, wakeTime, fallAsleepMin }, targetSleepMin);
+
+        if (calculated.totalSleepMin < 60 || calculated.totalSleepMin > 900) {
             return res.status(400).json({ message: 'Thoi luong ngu can nam trong khoang 1 den 15 tieng' });
         }
 
         const payload = {
             bedtime,
             wakeTime,
-            totalSleepMin,
-            sleepScore: Number.isInteger(sleepScore) ? sleepScore : 0,
-            efficiency: Number.isInteger(efficiency) ? efficiency : 0,
-            fallAsleepMin: Number.isInteger(fallAsleepMin) ? fallAsleepMin : 0,
+            totalSleepMin: calculated.totalSleepMin,
+            sleepScore: calculated.sleepScore,
+            efficiency: calculated.efficiency,
+            fallAsleepMin: calculated.fallAsleepMin,
             factors,
             notes: typeof notes === 'string' ? notes.trim() : null
         };
@@ -249,22 +313,27 @@ router.post('/', auth, async (req, res) => {
             eventType: created ? 'sleep_record_created' : 'sleep_record_updated',
             entityType: 'sleep_record',
             entityId: record.id,
-            metadata: { date, totalSleepMin, sleepScore, efficiency, fallAsleepMin, factors }
+            metadata: {
+                date,
+                totalSleepMin: calculated.totalSleepMin,
+                sleepScore: calculated.sleepScore,
+                efficiency: calculated.efficiency,
+                fallAsleepMin: calculated.fallAsleepMin,
+                factors
+            }
         });
 
-        const profile = await getProfile(req.user.id);
-        const targetSleepMin = Number(profile.targetSleepMin) || 480;
-        if (created && totalSleepMin < targetSleepMin - 45) {
+        if (created && calculated.totalSleepMin < targetSleepMin - 45) {
             await createNotification({
                 userId: req.user.id,
                 title: 'Cảnh báo thiếu ngủ',
-                message: `Đêm ${date} thấp hơn mục tiêu khoảng ${Math.round((targetSleepMin - totalSleepMin) / 60 * 10) / 10} giờ. Hãy bắt đầu routine sớm hơn tối nay.`,
+                message: `Đêm ${date} thấp hơn mục tiêu khoảng ${Math.round((targetSleepMin - calculated.totalSleepMin) / 60 * 10) / 10} giờ. Hãy bắt đầu routine sớm hơn tối nay.`,
                 type: 'sleep_alert',
-                metadata: { date, totalSleepMin, targetSleepMin }
+                metadata: { date, totalSleepMin: calculated.totalSleepMin, targetSleepMin }
             });
         }
 
-        res.json(record);
+        res.json(normalizeSleepRecord(record, targetSleepMin));
     } catch (err) {
         console.error(err.message);
         res.status(500).json({ message: 'Loi Server' });

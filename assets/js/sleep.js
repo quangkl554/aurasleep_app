@@ -14,6 +14,7 @@ let sleepProfile = {
 let TARGET_SLEEP_MIN = sleepProfile.targetSleepMin;
 let GOOD_SLEEP_MIN = Math.max(300, sleepProfile.targetSleepMin - 60);
 const GOOD_LATENCY_MIN = 20;
+const ringAnimations = new WeakMap();
 const factorLabels = {
   stress: 'Stress',
   caffeine: 'Caffeine',
@@ -134,6 +135,31 @@ export function combineDateAndTime(dateString, timeString) {
   return new Date(`${dateString}T${timeString}:00`);
 }
 
+function clampMetric(value, min = 0, max = 100) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function calculateSleepEfficiency(totalSleepMin, inBedMin) {
+  return inBedMin > 0
+    ? Math.round(clampMetric((totalSleepMin / inBedMin) * 100))
+    : 0;
+}
+
+function calculateSleepScore({ totalSleepMin, efficiency, fallAsleepMin, targetSleepMin = TARGET_SLEEP_MIN }) {
+  const safeTarget = Math.max(1, Number(targetSleepMin) || 480);
+  const durationRatio = clampMetric((Number(totalSleepMin) || 0) / safeTarget, 0, 1.25);
+  const durationScore = durationRatio <= 1
+    ? Math.pow(durationRatio, 1.35) * 100
+    : Math.max(72, 100 - (durationRatio - 1) * 70);
+  const latencyScore = clampMetric(100 - Math.max(0, (Number(fallAsleepMin) || 0) - 15) * 2.2);
+  let score = durationScore * 0.7 + (Number(efficiency) || 0) * 0.2 + latencyScore * 0.1;
+
+  if (durationRatio < 0.7) score = Math.min(score, 72);
+  if (durationRatio < 0.55) score = Math.min(score, 60);
+
+  return Math.round(clampMetric(score));
+}
+
 export function calculateSleepMetrics({ date, bedtime, wakeTime, fallAsleepMin }) {
   const bedDate = combineDateAndTime(date, bedtime);
   let wakeDate = combineDateAndTime(date, wakeTime);
@@ -144,10 +170,8 @@ export function calculateSleepMetrics({ date, bedtime, wakeTime, fallAsleepMin }
   const inBedMin = Math.max(0, Math.round((wakeDate - bedDate) / 60000));
   const safeFallAsleepMin = Math.max(0, Number(fallAsleepMin) || 0);
   const totalSleepMin = Math.max(0, inBedMin - safeFallAsleepMin);
-  const efficiency = inBedMin > 0 ? Math.max(0, Math.min(100, Math.round((totalSleepMin / inBedMin) * 100))) : 0;
-  const durationScore = Math.max(0, 100 - Math.abs(totalSleepMin - TARGET_SLEEP_MIN) / TARGET_SLEEP_MIN * 45);
-  const latencyPenalty = Math.min(20, Math.max(0, safeFallAsleepMin - 15) * 0.6);
-  const sleepScore = Math.max(0, Math.min(100, Math.round(durationScore * 0.65 + efficiency * 0.35 - latencyPenalty)));
+  const efficiency = calculateSleepEfficiency(totalSleepMin, inBedMin);
+  const sleepScore = calculateSleepScore({ totalSleepMin, efficiency, fallAsleepMin: safeFallAsleepMin });
 
   return {
     bedtime: bedDate.toISOString(),
@@ -435,6 +459,38 @@ function toDate(value) {
   if (!value) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function getInBedMinutes(record) {
+  const bedDate = toDate(record?.bedtime);
+  let wakeDate = toDate(record?.wakeTime);
+  if (!bedDate || !wakeDate) return null;
+  if (wakeDate <= bedDate) {
+    wakeDate = new Date(wakeDate);
+    wakeDate.setDate(wakeDate.getDate() + 1);
+  }
+  return Math.max(0, Math.round((wakeDate - bedDate) / 60000));
+}
+
+function normalizeSleepRecord(record) {
+  const fallAsleepMin = Math.max(0, Number(record?.fallAsleepMin) || 0);
+  const inBedMin = getInBedMinutes(record);
+  const totalSleepMin = Number.isFinite(Number(record?.totalSleepMin))
+    ? Math.max(0, Number(record.totalSleepMin))
+    : Math.max(0, (inBedMin || 0) - fallAsleepMin);
+  const efficiency = calculateSleepEfficiency(totalSleepMin, inBedMin || totalSleepMin + fallAsleepMin);
+  const sleepScore = calculateSleepScore({ totalSleepMin, efficiency, fallAsleepMin });
+  return {
+    ...record,
+    totalSleepMin,
+    efficiency,
+    sleepScore,
+    fallAsleepMin
+  };
+}
+
+function normalizeSleepRecords(records) {
+  return Array.isArray(records) ? records.map(normalizeSleepRecord) : [];
 }
 
 function formatShortDate(dateString) {
@@ -761,9 +817,45 @@ function setRing(selector, value, label) {
   const ring = document.querySelector(selector);
   if (!ring) return;
   const safeValue = Math.max(0, Math.min(100, Number(value) || 0));
-  ring.style.setProperty('--ring-value', `${safeValue}%`);
   const labelEl = ring.querySelector('span');
   if (labelEl) labelEl.textContent = label;
+
+  const currentValue = Number(ring.dataset.ringValue);
+  const startValue = Number.isFinite(currentValue) ? currentValue : 0;
+  const shouldReduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const existingAnimation = ringAnimations.get(ring);
+  if (existingAnimation) cancelAnimationFrame(existingAnimation);
+
+  if (shouldReduceMotion || Math.abs(startValue - safeValue) < 0.5) {
+    ring.style.setProperty('--ring-value', `${safeValue}%`);
+    ring.dataset.ringValue = String(safeValue);
+    ring.classList.remove('is-animating');
+    return;
+  }
+
+  const duration = 680;
+  const startedAt = performance.now();
+  ring.classList.add('is-animating');
+
+  function tick(now) {
+    const progress = Math.min(1, (now - startedAt) / duration);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const nextValue = startValue + (safeValue - startValue) * eased;
+    ring.style.setProperty('--ring-value', `${nextValue}%`);
+    ring.dataset.ringValue = String(nextValue);
+
+    if (progress < 1) {
+      ringAnimations.set(ring, requestAnimationFrame(tick));
+      return;
+    }
+
+    ring.style.setProperty('--ring-value', `${safeValue}%`);
+    ring.dataset.ringValue = String(safeValue);
+    ring.classList.remove('is-animating');
+    ringAnimations.delete(ring);
+  }
+
+  ringAnimations.set(ring, requestAnimationFrame(tick));
 }
 
 function updateDayRings(record, isVisible) {
@@ -802,7 +894,7 @@ export function getDashboardSuggestion(record) {
 export async function loadDashboardData() {
   try {
     const res = await apiFetch('/api/sleep?range=week');
-    const records = await res.json();
+    const records = normalizeSleepRecords(await res.json());
     const lastRecord = records[records.length - 1];
 
     const scoreValue = document.querySelector('#dashboard-screen .score-value');
@@ -848,7 +940,7 @@ export async function loadSleepData(range = 'week') {
       data = cached.data;
     } else {
       const res = await apiFetch(`/api/sleep?range=${range}&date=${encodeURIComponent(selectedDate)}`);
-      data = await res.json();
+      data = normalizeSleepRecords(await res.json());
       sleepDataCache.set(cacheKey, { data, timestamp: Date.now() });
     }
     
