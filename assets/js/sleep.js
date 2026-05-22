@@ -504,6 +504,11 @@ function formatMinutesShort(minutes) {
   return `${Math.round(minutes)}p`;
 }
 
+function getGoalPercent(totalSleepMin, targetSleepMin = TARGET_SLEEP_MIN) {
+  const safeTarget = Math.max(1, Number(targetSleepMin) || 480);
+  return Math.round(clampMetric(((Number(totalSleepMin) || 0) / safeTarget) * 100));
+}
+
 function formatRecordTime(value) {
   const date = toDate(value);
   if (!date) return '--:--';
@@ -533,7 +538,7 @@ function buildTodayChart(records) {
   const record = records[records.length - 1];
   if (!record) return [];
   const totalSleepMin = Number(record.totalSleepMin) || 0;
-  const efficiency = Number(record.efficiency) || 0;
+  const goalPercent = getGoalPercent(totalSleepMin);
   const latency = Number(record.fallAsleepMin) || 0;
   const score = Number(record.sleepScore) || 0;
 
@@ -544,9 +549,9 @@ function buildTodayChart(records) {
       height: Math.max(14, Math.min(100, (totalSleepMin / 540) * 100))
     },
     {
-      label: 'Hiệu suất',
-      valueText: `${efficiency}%`,
-      height: Math.max(14, Math.min(100, efficiency))
+      label: 'Mục tiêu',
+      valueText: `${goalPercent}%`,
+      height: Math.max(14, goalPercent)
     },
     {
       label: 'Chìm',
@@ -592,7 +597,7 @@ function buildMonthChart(records, selectedDate) {
       height: record ? Math.max(12, Math.min(100, (minutes / maxMinutes) * 100)) : 8,
       detailTitle: formatDateOnly(dateString),
       detailValue: record ? formatSleepDuration(minutes) : 'Chưa có dữ liệu',
-      detailMeta: record ? `Giờ đi ngủ ${formatRecordTime(record.bedtime)} · Điểm ngủ ${record.sleepScore ?? '--'}/100 · Hiệu suất ${record.efficiency ?? '--'}%` : 'Nhấn Ghi nhận để thêm dữ liệu ngày này',
+      detailMeta: record ? `Giờ đi ngủ ${formatRecordTime(record.bedtime)} · Đạt mục tiêu ${getGoalPercent(minutes)}% · Điểm ngủ ${record.sleepScore ?? '--'}/100` : 'Nhấn Ghi nhận để thêm dữ liệu ngày này',
       hasData: Boolean(record),
       isToday: dateString === today
     };
@@ -866,21 +871,21 @@ function updateDayRings(record, isVisible) {
   if (!isVisible || !record) return;
 
   const totalSleepMin = Number(record.totalSleepMin) || 0;
-  const efficiency = Number(record.efficiency) || 0;
+  const goalPercent = getGoalPercent(totalSleepMin);
   const latency = Number(record.fallAsleepMin) || 0;
   const score = Number(record.sleepScore) || 0;
   const durationPercent = Math.max(0, Math.min(100, (totalSleepMin / TARGET_SLEEP_MIN) * 100));
   const latencyPercent = Math.max(0, Math.min(100, 100 - (latency / 45) * 75));
 
   setRing('[data-ring="duration"]', durationPercent, formatSleepDuration(totalSleepMin));
-  setRing('[data-ring="efficiency"]', efficiency, `${efficiency}%`);
+  setRing('[data-ring="goal"]', goalPercent, `${goalPercent}%`);
   setRing('[data-ring="latency"]', latencyPercent, `${latency}p`);
   setRing('[data-ring="score"]', score, `${score}`);
 }
 
 export function getRhythmLabel(record) {
   if (!record) return 'Chưa có dữ liệu';
-  if ((record.sleepScore || 0) >= 85 && (record.efficiency || 0) >= 85) return 'Ổn định';
+  if ((record.sleepScore || 0) >= 85 && (Number(record.totalSleepMin) || 0) >= GOOD_SLEEP_MIN) return 'Ổn định';
   if ((record.sleepScore || 0) >= 70) return 'Cần theo dõi';
   return 'Cần cải thiện';
 }
@@ -913,7 +918,7 @@ export async function loadDashboardData() {
     }
     if (statVals.length >= 3) {
       statVals[0].textContent = formatSleepDuration(lastRecord.totalSleepMin);
-      statVals[1].textContent = `${lastRecord.efficiency}%`;
+      statVals[1].textContent = `${getGoalPercent(lastRecord.totalSleepMin)}%`;
       statVals[2].textContent = getRhythmLabel(lastRecord);
     }
     if (aiSuggestion) aiSuggestion.textContent = getDashboardSuggestion(lastRecord);
@@ -988,12 +993,14 @@ export async function loadSleepData(range = 'week') {
     const avgSleep = Math.round(average(data, 'totalSleepMin'));
     const avgLatency = Math.round(average(data, 'fallAsleepMin'));
     const avgQuality = Math.round(average(data, 'sleepScore'));
-    const avgEfficiency = Math.round(average(data, 'efficiency'));
-    const daysAtGoal = data.filter(record => (Number(record.totalSleepMin) || 0) >= GOOD_SLEEP_MIN).length;
+    const avgGoalPercent = data.length
+      ? Math.round(data.reduce((sum, record) => sum + getGoalPercent(record.totalSleepMin), 0) / data.length)
+      : 0;
+    const daysAtGoal = data.filter(record => (Number(record.totalSleepMin) || 0) >= TARGET_SLEEP_MIN).length;
     const goalRate = data.length ? Math.round((daysAtGoal / data.length) * 100) : 0;
     const latestSleep = Number(dayRecord.totalSleepMin) || 0;
     const latestLatency = Number(dayRecord.fallAsleepMin) || 0;
-    const latestEfficiency = Number(dayRecord.efficiency) || 0;
+    const latestGoalPercent = getGoalPercent(latestSleep);
     const latestScore = Number(dayRecord.sleepScore) || 0;
     const midpoint = Math.floor(data.length / 2);
     const previousRecords = data.slice(0, midpoint);
@@ -1014,12 +1021,12 @@ export async function loadSleepData(range = 'week') {
         delta >= 0 ? '#10b981' : '#ef4444'
       );
       setStatCard('analytics-latency', 'Chìm giấc', `${latestLatency} phút`, getLatencyMeta(latestLatency));
-      setStatCard('analytics-quality', 'Hiệu suất', `${latestEfficiency}%`, `Điểm ngủ ${latestScore}/100`);
+      setStatCard('analytics-quality', 'Mục tiêu', `${latestGoalPercent}%`, `Điểm ngủ ${latestScore}/100`);
     } else {
       setStatCard('analytics-avg', 'TB mỗi ngày', formatSleepDuration(avgSleep), `${data.length} bản ghi trong kỳ`, 'var(--accent-primary)');
       setStatCard('analytics-change', 'Đạt mục tiêu', `${goalRate}%`, `${daysAtGoal}/${data.length} ngày đạt mục tiêu`, goalRate >= 70 ? '#10b981' : '#ef4444');
       setStatCard('analytics-latency', 'Chìm giấc TB', `${avgLatency} phút`, getLatencyMeta(avgLatency));
-      setStatCard('analytics-quality', 'Chất lượng TB', `${avgQuality}/100`, `Hiệu suất TB ${avgEfficiency}%`);
+      setStatCard('analytics-quality', 'Điểm ngủ TB', `${avgQuality}/100`, `Mức đạt mục tiêu TB ${avgGoalPercent}%`);
     }
     if (changeEl && range !== 'today') changeEl.style.color = goalRate >= 70 ? '#10b981' : '#ef4444';
     updateInsightPanel(data);
