@@ -7,6 +7,8 @@ import './chat.js';
 
 let calendarCursorDate = null;
 let activeCalendarPicker = null;
+let activeTimeInput = null;
+let timePickerValue = { hour: 22, minute: 30 };
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Load theme
@@ -37,6 +39,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   initRememberedLogin();
   initSoundGrid();
   initDeviceControls();
+  const sleepEntryModal = document.getElementById('sleep-entry-modal');
+  if (sleepEntryModal) initCustomTimeInputs(sleepEntryModal);
 
   const analyticsDateInput = document.getElementById('analytics-date-input');
   if (analyticsDateInput) {
@@ -204,6 +208,157 @@ window.openCalendarPicker = openCalendarPicker;
 window.shiftCalendarMonth = shiftCalendarMonth;
 window.selectAnalyticsDate = selectAnalyticsDate;
 window.getTodayDateString = getTodayDateString;
+
+function padTimePart(value) {
+  return String(value).padStart(2, '0');
+}
+
+function normalizeTimeParts(hour, minute) {
+  let safeHour = Number(hour);
+  let safeMinute = Number(minute);
+  if (!Number.isFinite(safeHour)) safeHour = 22;
+  if (!Number.isFinite(safeMinute)) safeMinute = 30;
+
+  safeHour = ((Math.round(safeHour) % 24) + 24) % 24;
+  safeMinute = Math.round(safeMinute / 5) * 5;
+
+  while (safeMinute >= 60) {
+    safeMinute -= 60;
+    safeHour = (safeHour + 1) % 24;
+  }
+  while (safeMinute < 0) {
+    safeMinute += 60;
+    safeHour = (safeHour + 23) % 24;
+  }
+
+  return { hour: safeHour, minute: safeMinute };
+}
+
+function parseTimeValue(value, fallback = '22:30') {
+  const source = /^\d{2}:\d{2}$/.test(value || '') ? value : fallback;
+  const [hour, minute] = source.split(':').map(Number);
+  return normalizeTimeParts(hour, minute);
+}
+
+function formatTimeValue(value) {
+  const { hour, minute } = parseTimeValue(value);
+  return `${padTimePart(hour)}:${padTimePart(minute)}`;
+}
+
+function getTimeInputLabel(input) {
+  return input?.closest('label')?.querySelector('span')?.textContent?.trim() || 'Chọn giờ';
+}
+
+function getTimePresets(input) {
+  const name = String(input?.name || '').toLowerCase();
+  if (name.includes('wake')) return ['05:30', '06:00', '06:30', '07:00', '07:30'];
+  if (name.includes('caffeine')) return ['12:00', '13:00', '14:00', '15:00', '16:00'];
+  if (name.includes('start')) return ['20:30', '21:00', '21:30', '22:00', '22:30'];
+  return ['21:30', '22:00', '22:30', '23:00', '23:30'];
+}
+
+function updateTimeButton(input) {
+  const button = input?.nextElementSibling?.classList?.contains('time-picker-button')
+    ? input.nextElementSibling
+    : null;
+  if (!button) return;
+  const valueEl = button.querySelector('strong');
+  if (valueEl) valueEl.textContent = formatTimeValue(input.value || input.dataset.fallback || '22:30');
+  button.setAttribute('aria-label', `${getTimeInputLabel(input)} ${valueEl?.textContent || ''}`);
+}
+
+function refreshTimePickerButtons(root = document) {
+  root.querySelectorAll('input[data-time-enhanced="true"]').forEach(updateTimeButton);
+}
+
+function initCustomTimeInputs(root = document) {
+  root.querySelectorAll('input[type="time"]:not([data-time-enhanced="true"])').forEach(input => {
+    const fallback = input.getAttribute('value') || input.value || '22:30';
+    input.dataset.timeEnhanced = 'true';
+    input.dataset.fallback = fallback;
+    input.classList.add('time-input-native');
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'time-picker-button';
+    button.innerHTML = '<i class="fa-regular fa-clock"></i><strong>--:--</strong>';
+    button.setAttribute('aria-haspopup', 'dialog');
+    button.addEventListener('click', () => openTimePicker(input));
+    input.insertAdjacentElement('afterend', button);
+    input.addEventListener('change', () => updateTimeButton(input));
+    updateTimeButton(input);
+  });
+}
+
+function openTimePicker(input) {
+  activeTimeInput = typeof input === 'string' ? document.querySelector(input) : input;
+  if (!activeTimeInput) return;
+  timePickerValue = parseTimeValue(activeTimeInput.value, activeTimeInput.dataset.fallback || '22:30');
+
+  const title = document.getElementById('time-picker-title');
+  if (title) title.textContent = getTimeInputLabel(activeTimeInput);
+
+  renderTimePicker();
+  const modal = document.getElementById('time-picker-modal');
+  modal?.classList.add('active');
+  modal?.setAttribute('aria-hidden', 'false');
+}
+
+function closeTimePicker() {
+  const modal = document.getElementById('time-picker-modal');
+  modal?.classList.remove('active');
+  modal?.setAttribute('aria-hidden', 'true');
+}
+
+function setTimePickerPreset(value) {
+  timePickerValue = parseTimeValue(value);
+  renderTimePicker();
+}
+
+function shiftTimePicker(part, amount) {
+  const delta = Number(amount) || 0;
+  if (part === 'hour') {
+    timePickerValue = normalizeTimeParts(timePickerValue.hour + delta, timePickerValue.minute);
+  } else {
+    timePickerValue = normalizeTimeParts(timePickerValue.hour, timePickerValue.minute + delta);
+  }
+  renderTimePicker();
+}
+
+function renderTimePicker() {
+  const value = `${padTimePart(timePickerValue.hour)}:${padTimePart(timePickerValue.minute)}`;
+  const preview = document.getElementById('time-picker-value');
+  const hour = document.getElementById('time-picker-hour');
+  const minute = document.getElementById('time-picker-minute');
+  const presets = document.getElementById('time-picker-presets');
+  if (preview) preview.textContent = value;
+  if (hour) hour.textContent = padTimePart(timePickerValue.hour);
+  if (minute) minute.textContent = padTimePart(timePickerValue.minute);
+  if (!presets) return;
+
+  presets.innerHTML = '';
+  getTimePresets(activeTimeInput).forEach(preset => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = preset;
+    button.className = preset === value ? 'active' : '';
+    button.addEventListener('click', () => setTimePickerPreset(preset));
+    presets.appendChild(button);
+  });
+}
+
+function applyTimePicker() {
+  if (!activeTimeInput) return;
+  activeTimeInput.value = `${padTimePart(timePickerValue.hour)}:${padTimePart(timePickerValue.minute)}`;
+  activeTimeInput.dispatchEvent(new Event('change', { bubbles: true }));
+  updateTimeButton(activeTimeInput);
+  closeTimePicker();
+}
+
+window.closeTimePicker = closeTimePicker;
+window.shiftTimePicker = shiftTimePicker;
+window.applyTimePicker = applyTimePicker;
+window.refreshTimePickerButtons = refreshTimePickerButtons;
 
 // Expose some functions to window for global access if needed
 window.toggleTheme = toggleTheme;

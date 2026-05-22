@@ -168,12 +168,8 @@ export function formatDateOnly(dateString) {
 function formatEntryDateLabel(dateString) {
   const date = new Date(`${dateString}T00:00:00`);
   if (Number.isNaN(date.getTime())) return '--/--/----';
-  return date.toLocaleDateString('vi-VN', {
-    weekday: 'short',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  });
+  const weekdays = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+  return `${weekdays[date.getDay()]}, ${formatDateOnly(dateString)}`;
 }
 
 function updateSleepEntryDateLabel(dateString) {
@@ -191,6 +187,7 @@ export function openSleepEntryModal() {
   form.elements.bedtime.value = sleepProfile.preferredBedtime || '22:30';
   form.elements.wakeTime.value = sleepProfile.preferredWakeTime || '06:30';
   form.elements.fallAsleepMin.value = '15';
+  window.refreshTimePickerButtons?.(form);
   overlay.classList.add('active');
   overlay.setAttribute('aria-hidden', 'false');
 }
@@ -451,6 +448,15 @@ function formatMinutesShort(minutes) {
   return `${Math.round(minutes)}p`;
 }
 
+function formatRecordTime(value) {
+  const date = toDate(value);
+  if (!date) return '--:--';
+  return date.toLocaleTimeString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
 function getMonthInfo(dateString = getTodayDateString()) {
   const [yearText, monthText] = String(dateString).split('-');
   const year = Number(yearText) || new Date().getFullYear();
@@ -528,9 +534,9 @@ function buildMonthChart(records, selectedDate) {
       label: String(day),
       valueText: record ? formatMinutesShort(minutes) : '',
       height: record ? Math.max(12, Math.min(100, (minutes / maxMinutes) * 100)) : 8,
-      title: record
-        ? `${formatDateOnly(dateString)} · ${formatSleepDuration(minutes)}`
-        : `${formatDateOnly(dateString)} · Chưa có dữ liệu`,
+      detailTitle: formatDateOnly(dateString),
+      detailValue: record ? formatSleepDuration(minutes) : 'Chưa có dữ liệu',
+      detailMeta: record ? `Giờ đi ngủ ${formatRecordTime(record.bedtime)} · Điểm ngủ ${record.sleepScore ?? '--'}/100 · Hiệu suất ${record.efficiency ?? '--'}%` : 'Nhấn Ghi nhận để thêm dữ liệu ngày này',
       hasData: Boolean(record),
       isToday: dateString === today
     };
@@ -569,6 +575,19 @@ function createChartContainer() {
   return container;
 }
 
+function ensureMonthChartDetail() {
+  const panel = document.getElementById('sleep-chart');
+  if (!panel) return null;
+  let detail = panel.querySelector('.chart-day-detail');
+  if (!detail) {
+    detail = document.createElement('div');
+    detail.className = 'chart-day-detail';
+    detail.innerHTML = '<span></span><strong></strong><small></small>';
+    panel.appendChild(detail);
+  }
+  return detail;
+}
+
 function ensureChartContainers(count) {
   const plot = document.querySelector('#sleep-chart .chart-plot');
   if (!plot) return [];
@@ -587,6 +606,21 @@ function ensureChartContainers(count) {
   containers = Array.from(plot.querySelectorAll('.chart-bar-container'));
   containers.forEach(container => {
     container.onclick = () => selectBar(container);
+    container.onmouseenter = () => {
+      if (plot.classList.contains('month-chart') && container.style.visibility !== 'hidden') {
+        selectBar(container);
+      }
+    };
+    container.onmousemove = () => {
+      if (plot.classList.contains('month-chart') && container.classList.contains('active')) {
+        positionChartSelectionDetail(container);
+      }
+    };
+    container.onfocus = () => {
+      if (plot.classList.contains('month-chart') && container.style.visibility !== 'hidden') {
+        selectBar(container);
+      }
+    };
     container.setAttribute('role', 'button');
     container.setAttribute('tabindex', '0');
     container.onkeydown = (event) => {
@@ -627,6 +661,9 @@ function renderChartItems(chartData, range) {
     container.style.visibility = item ? 'visible' : 'hidden';
     container.removeAttribute('title');
     container.removeAttribute('aria-label');
+    delete container.dataset.detailTitle;
+    delete container.dataset.detailValue;
+    delete container.dataset.detailMeta;
 
     if (bar) {
       bar.style.height = '10%';
@@ -655,10 +692,10 @@ function renderChartItems(chartData, range) {
     container.classList.toggle('has-data', hasData);
     container.classList.toggle('no-data', !hasData);
     container.classList.toggle('is-today', Boolean(item.isToday));
-    if (item.title) {
-      container.setAttribute('title', item.title);
-      container.setAttribute('aria-label', item.title);
-    }
+    container.dataset.detailTitle = item.detailTitle || item.label;
+    container.dataset.detailValue = item.detailValue || item.valueText || '';
+    container.dataset.detailMeta = item.detailMeta || '';
+    container.setAttribute('aria-label', `${container.dataset.detailTitle} ${container.dataset.detailValue}`.trim());
 
     if (bar) {
       bar.style.height = `${item.height}%`;
@@ -671,7 +708,46 @@ function renderChartItems(chartData, range) {
     if (label) label.textContent = item.label;
   });
 
+  const detail = ensureMonthChartDetail();
+  if (detail) detail.classList.remove('visible', 'below');
   return containers;
+}
+
+function positionChartSelectionDetail(element) {
+  const panel = document.getElementById('sleep-chart');
+  const detail = panel?.querySelector('.chart-day-detail');
+  if (!panel || !detail || !element) return;
+
+  const panelRect = panel.getBoundingClientRect();
+  const elementRect = element.getBoundingClientRect();
+  const preferredX = elementRect.left + elementRect.width / 2 - panelRect.left;
+  const minX = Math.min(96, panelRect.width / 2);
+  const maxX = Math.max(minX, panelRect.width - minX);
+  const x = Math.max(minX, Math.min(maxX, preferredX));
+  const aboveY = elementRect.top - panelRect.top - 12;
+  const placeBelow = aboveY < 84;
+  const y = placeBelow
+    ? elementRect.bottom - panelRect.top + 12
+    : aboveY;
+
+  detail.style.left = `${x}px`;
+  detail.style.top = `${y}px`;
+  detail.classList.toggle('below', placeBelow);
+}
+
+function updateChartSelectionDetail(element) {
+  const detail = document.querySelector('#sleep-chart .chart-day-detail');
+  const plot = document.querySelector('#sleep-chart .chart-plot');
+  if (!detail || !plot?.classList.contains('month-chart')) return;
+
+  detail.classList.add('visible');
+  const title = detail.querySelector('span');
+  const value = detail.querySelector('strong');
+  const meta = detail.querySelector('small');
+  if (title) title.textContent = element.dataset.detailTitle || '--';
+  if (value) value.textContent = element.dataset.detailValue || '--';
+  if (meta) meta.textContent = element.dataset.detailMeta || '';
+  positionChartSelectionDetail(element);
 }
 
 function getAnalyticsDate() {
@@ -900,6 +976,7 @@ export function selectBar(element) {
     activeValue.style.color = 'var(--accent-primary)';
     activeValue.style.fontWeight = '800';
   }
+  updateChartSelectionDetail(element);
 }
 
 window.selectBar = selectBar;

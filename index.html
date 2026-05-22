@@ -1087,6 +1087,49 @@
     </div>
   </div>
 
+  <div id="time-picker-modal" class="app-alert-overlay time-picker-overlay" aria-hidden="true">
+    <div class="app-alert-dialog time-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="time-picker-title">
+      <div class="calendar-sheet-handle"></div>
+      <div class="calendar-header">
+        <div>
+          <span class="chart-kicker">Chọn giờ</span>
+          <h3 id="time-picker-title">Giờ ngủ</h3>
+        </div>
+        <button class="icon-btn" type="button" onclick="closeTimePicker()" aria-label="Đóng chọn giờ">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="time-picker-preview" id="time-picker-value">22:30</div>
+      <div class="time-picker-controls">
+        <div class="time-unit-card">
+          <button type="button" onclick="shiftTimePicker('hour', 1)" aria-label="Tăng giờ">
+            <i class="fa-solid fa-chevron-up"></i>
+          </button>
+          <span>Giờ</span>
+          <strong id="time-picker-hour">22</strong>
+          <button type="button" onclick="shiftTimePicker('hour', -1)" aria-label="Giảm giờ">
+            <i class="fa-solid fa-chevron-down"></i>
+          </button>
+        </div>
+        <div class="time-unit-card">
+          <button type="button" onclick="shiftTimePicker('minute', 5)" aria-label="Tăng phút">
+            <i class="fa-solid fa-chevron-up"></i>
+          </button>
+          <span>Phút</span>
+          <strong id="time-picker-minute">30</strong>
+          <button type="button" onclick="shiftTimePicker('minute', -5)" aria-label="Giảm phút">
+            <i class="fa-solid fa-chevron-down"></i>
+          </button>
+        </div>
+      </div>
+      <div class="time-picker-presets" id="time-picker-presets"></div>
+      <div class="calendar-actions">
+        <button class="app-prompt-secondary" type="button" onclick="closeTimePicker()">Hủy</button>
+        <button class="app-alert-button app-prompt-primary" type="button" onclick="applyTimePicker()">Xong</button>
+      </div>
+    </div>
+  </div>
+
   <div id="sleep-entry-modal" class="app-alert-overlay" aria-hidden="true">
     <form class="app-alert-dialog sleep-entry-dialog" onsubmit="submitSleepEntry(event)">
       <div class="app-alert-icon">

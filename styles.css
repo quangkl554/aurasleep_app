@@ -360,6 +360,161 @@ body {
   z-index: 1100;
 }
 
+.time-picker-overlay {
+  place-items: end center;
+  padding: 18px;
+}
+
+.time-picker-overlay.active {
+  z-index: 1120;
+}
+
+.time-picker-dialog {
+  width: min(100%, 398px);
+  padding: 12px 16px 16px;
+  border-radius: 30px;
+  text-align: left;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03)),
+    var(--bg-secondary);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.52);
+}
+
+.time-picker-preview {
+  margin: 12px 0;
+  padding: 18px;
+  border: 1px solid rgba(244, 162, 97, 0.28);
+  border-radius: 24px;
+  text-align: center;
+  color: #fff;
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(244, 162, 97, 0.2), transparent 58%),
+    rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.time-picker-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  position: relative;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.time-picker-controls::after {
+  content: ":";
+  position: absolute;
+  left: 50%;
+  top: 56%;
+  transform: translate(-50%, -50%);
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 26px;
+  font-weight: 800;
+  pointer-events: none;
+}
+
+.time-unit-card {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: 36px auto 54px 36px;
+  align-items: center;
+  justify-items: center;
+  gap: 6px;
+  padding: 10px 9px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.055);
+  box-shadow: inset 0 -14px 22px rgba(0, 0, 0, 0.08);
+}
+
+.time-unit-card button,
+.time-picker-presets button {
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+  transition: transform var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.time-unit-card button {
+  width: 42px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.time-unit-card button:hover {
+  color: #fff;
+  background: rgba(244, 162, 97, 0.18);
+}
+
+.time-unit-card button:active,
+.time-picker-presets button:active {
+  transform: scale(0.96);
+}
+
+.time-unit-card span {
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.time-unit-card strong {
+  width: 100%;
+  min-height: 54px;
+  display: grid;
+  place-items: center;
+  border-radius: 17px;
+  border: 1px solid rgba(244, 162, 97, 0.26);
+  background:
+    linear-gradient(135deg, rgba(99, 102, 241, 0.42), rgba(244, 162, 97, 0.28)),
+    rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  font-size: 30px;
+  line-height: 1;
+  box-shadow: 0 12px 24px rgba(3, 6, 18, 0.24);
+}
+
+.time-picker-presets {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.time-picker-presets button {
+  min-height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.time-picker-presets button:hover {
+  border-color: rgba(244, 162, 97, 0.35);
+  background: rgba(244, 162, 97, 0.1);
+}
+
+.time-picker-presets button.active {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--accent-secondary), var(--accent-primary));
+  box-shadow: 0 10px 22px rgba(244, 162, 97, 0.22);
+}
+
 .analytics-calendar-dialog {
   width: min(100%, 398px);
   padding: 12px 16px 16px;
@@ -757,6 +912,8 @@ p { font-size: 14px; line-height: 1.5; color: var(--text-secondary); }
 
 .analytics-chart-panel {
   padding: 18px 18px 14px;
+  position: relative;
+  overflow: visible;
 }
 
 .chart-header {
@@ -834,12 +991,12 @@ p { font-size: 14px; line-height: 1.5; color: var(--text-secondary); }
 
 .chart-plot.month-chart {
   height: auto;
-  min-height: 246px;
+  min-height: 252px;
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   align-items: stretch;
   justify-content: stretch;
-  gap: 7px;
+  gap: 8px;
 }
 
 .chart-plot.month-chart .chart-grid-line {
@@ -852,19 +1009,24 @@ p { font-size: 14px; line-height: 1.5; color: var(--text-secondary); }
 
 .month-chart .chart-bar-container {
   width: auto;
-  height: 44px;
+  min-height: 46px;
+  aspect-ratio: 1;
   min-width: 0;
   position: relative;
   justify-content: flex-start;
   align-items: flex-start;
-  padding: 7px 6px;
+  padding: 8px 7px;
   border: 1px solid var(--border);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.045);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.065), rgba(255,255,255,0.02)),
+    rgba(255, 255, 255, 0.035);
+  box-shadow: inset 0 -12px 20px rgba(0, 0, 0, 0.08);
 }
 
 .month-chart .chart-bar-container:hover {
-  transform: translateY(-1px);
+  z-index: 5;
+  transform: translateY(-2px);
 }
 
 .month-chart .chart-bar-container.is-today {
@@ -873,42 +1035,123 @@ p { font-size: 14px; line-height: 1.5; color: var(--text-secondary); }
 
 .month-chart .chart-bar-container.active {
   border-color: rgba(244, 162, 97, 0.72);
-  background: rgba(244, 162, 97, 0.12);
+  background:
+    radial-gradient(circle at 50% 68%, rgba(244, 162, 97, 0.24), transparent 46%),
+    rgba(244, 162, 97, 0.1);
+  box-shadow: 0 10px 24px rgba(244, 162, 97, 0.16);
 }
 
 .month-chart .chart-bar-container.no-data {
   opacity: 0.58;
 }
 
+.month-chart .chart-bar-container.has-data .chart-bar {
+  opacity: 0.78;
+}
+
 .month-chart .chart-value {
-  position: absolute;
-  right: 5px;
-  bottom: 5px;
-  transform: none;
-  max-width: calc(100% - 10px);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 7px;
-  line-height: 1;
+  display: none;
 }
 
 .month-chart .chart-bar {
   position: absolute;
-  left: 6px;
-  right: 6px;
-  bottom: 6px;
-  width: auto;
-  min-height: 4px;
-  max-height: 20px;
-  border-radius: 999px;
+  left: 50%;
+  bottom: 9px;
+  width: 72%;
+  min-height: 5px;
+  max-height: 23px;
+  border-radius: 999px 999px 8px 8px;
+  transform: translateX(-50%);
 }
 
 .month-chart .chart-label {
   margin-top: 0;
   color: var(--text-primary);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
+}
+
+.month-chart .chart-bar-container:hover .chart-label,
+.month-chart .chart-bar-container.active .chart-label {
+  color: #fff;
+}
+
+.chart-day-detail {
+  position: absolute;
+  left: 50%;
+  top: 120px;
+  z-index: 20;
+  width: max-content;
+  min-width: 196px;
+  max-width: min(268px, calc(100% - 28px));
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(244, 162, 97, 0.2);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.045)),
+    rgba(18, 24, 59, 0.94);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transform: translate(-50%, calc(-100% - 10px)) scale(0.98);
+  transition: opacity var(--transition-fast), transform var(--transition-fast), visibility var(--transition-fast);
+}
+
+.chart-day-detail.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, calc(-100% - 10px)) scale(1);
+}
+
+.chart-day-detail.below.visible {
+  transform: translate(-50%, 10px) scale(1);
+}
+
+.chart-day-detail::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  width: 14px;
+  height: 14px;
+  border-right: 1px solid rgba(244, 162, 97, 0.2);
+  border-bottom: 1px solid rgba(244, 162, 97, 0.2);
+  background: rgba(18, 24, 59, 0.94);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.chart-day-detail.below::after {
+  top: -7px;
+  bottom: auto;
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 1px solid rgba(244, 162, 97, 0.2);
+  border-top: 1px solid rgba(244, 162, 97, 0.2);
+}
+
+.chart-day-detail span {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.chart-day-detail strong {
+  color: var(--accent-primary);
+  font-size: 14px;
+  font-weight: 800;
+  text-align: right;
+}
+
+.chart-day-detail small {
+  grid-column: 1 / -1;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.35;
 }
 
 .analytics-stats-grid {
@@ -1636,7 +1879,16 @@ html[data-plan="free"] .premium-analytics-lock .premium-lock-overlay:hover {
   min-width: 0;
 }
 
-.sleep-entry-date-button {
+.time-input-native {
+  position: absolute;
+  width: 1px !important;
+  height: 1px !important;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sleep-entry-date-button,
+.time-picker-button {
   width: 100%;
   min-height: 44px;
   display: flex;
@@ -1652,12 +1904,14 @@ html[data-plan="free"] .premium-analytics-lock .premium-lock-overlay:hover {
   transition: border-color var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
 }
 
-.sleep-entry-date-button i {
+.sleep-entry-date-button i,
+.time-picker-button i {
   color: var(--accent-primary);
   font-size: 15px;
 }
 
-.sleep-entry-date-button strong {
+.sleep-entry-date-button strong,
+.time-picker-button strong {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1666,11 +1920,17 @@ html[data-plan="free"] .premium-analytics-lock .premium-lock-overlay:hover {
   font-weight: 800;
 }
 
-.sleep-entry-date-button:active {
+.time-picker-button strong {
+  font-size: 16px;
+}
+
+.sleep-entry-date-button:active,
+.time-picker-button:active {
   transform: scale(0.98);
 }
 
-.sleep-entry-date-button:hover {
+.sleep-entry-date-button:hover,
+.time-picker-button:hover {
   border-color: rgba(244, 162, 97, 0.35);
   background: rgba(244, 162, 97, 0.1);
 }
